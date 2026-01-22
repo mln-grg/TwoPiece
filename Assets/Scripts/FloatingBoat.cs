@@ -1,9 +1,4 @@
-﻿// Floating Boat for HDRP Water System created by Seta
-// https://www.youtube.com/@SetaLevelDesign
-// Comments added by ChatGPT
-// Licence: Creative Commons
-
-using UnityEngine; // Unity core engine
+﻿using UnityEngine; // Unity core engine
 using UnityEngine.Rendering.HighDefinition; // HDRP-specific rendering
 using Unity.Mathematics; // Unity mathematics library
 using System.Linq; // LINQ support
