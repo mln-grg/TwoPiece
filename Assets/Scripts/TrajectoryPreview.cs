@@ -3,73 +3,46 @@ using UnityEngine;
 
 public class TrajectoryPreview : MonoBehaviour
 {
-    [Header("Visual")]
-    public LineRenderer linePrefab;
-    public int pointsPerLine = 30;
-    public float timeStep = 0.1f;
+    public LineRenderer line;
 
-    [Header("Arc")]
-    public float gravityScale = 1.3f;
-    public int sampleCount = 5;          // how wide the fan is
-    public float horizontalSpread = 6f;  // degrees
+    [Header("Arc Shape")]
+    public int points = 40;
+    public float gravity = 18f;
+    public float forwardSpeed = 25f;
 
-    List<LineRenderer> lines = new();
-
-    void Awake()
-    {
-        for (int i = 0; i < sampleCount; i++)
-        {
-            var lr = Instantiate(linePrefab, transform);
-            lr.enabled = false;
-            lines.Add(lr);
-        }
-    }
-
-    public void Show(
+    public void ShowArc(
         Vector3 origin,
-        Vector3 baseDirection,
-        float speed,
-        float verticalAngle
+        Vector3 direction,
+        float apexHeight
     )
     {
-        for (int i = 0; i < lines.Count; i++)
+        line.enabled = true;
+        line.positionCount = points;
+
+        // Compute vertical launch velocity needed to reach apex
+        float verticalVelocity = Mathf.Sqrt(2f * gravity * apexHeight);
+
+        float timeStep = 0.1f;
+
+        for (int i = 0; i < points; i++)
         {
-            float t = lines.Count == 1
-                ? 0
-                : (float)i / (lines.Count - 1);
+            float t = i * timeStep;
 
-            float yaw =
-                Mathf.Lerp(-horizontalSpread, horizontalSpread, t);
+            Vector3 horizontal =
+                direction.normalized * forwardSpeed * t;
 
-            Quaternion spread =
-                Quaternion.Euler(verticalAngle, yaw, 0f);
+            float vertical =
+                verticalVelocity * t - 0.5f * gravity * t * t;
 
-            Vector3 dir = spread * baseDirection;
+            Vector3 pos = origin + horizontal;
+            pos.y += vertical;
 
-            DrawLine(lines[i], origin, dir * speed);
+            line.SetPosition(i, pos);
         }
     }
 
     public void Hide()
     {
-        foreach (var lr in lines)
-            lr.enabled = false;
-    }
-
-    void DrawLine(LineRenderer lr, Vector3 startPos, Vector3 velocity)
-    {
-        lr.enabled = true;
-        lr.positionCount = pointsPerLine;
-
-        Vector3 pos = startPos;
-        Vector3 vel = velocity;
-
-        for (int i = 0; i < pointsPerLine; i++)
-        {
-            lr.SetPosition(i, pos);
-
-            vel += Physics.gravity * gravityScale * timeStep;
-            pos += vel * timeStep;
-        }
+        line.enabled = false;
     }
 }
