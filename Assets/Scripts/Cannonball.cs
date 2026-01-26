@@ -14,7 +14,7 @@ public class Cannonball : MonoBehaviour
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
-        rb.useGravity = false; // IMPORTANT
+        //rb.useGravity = false; // IMPORTANT
     }
     void Start()
     {
@@ -22,10 +22,10 @@ public class Cannonball : MonoBehaviour
     }
     void FixedUpdate()
     {
-        rb.AddForce(
+        /*rb.AddForce(
             Physics.gravity * gravityScale,
             ForceMode.Acceleration
-        );
+        );*/
     }
     void OnCollisionEnter(Collision col)
     {
