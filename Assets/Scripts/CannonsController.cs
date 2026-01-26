@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 public struct BallisticSolution
 {
@@ -13,8 +9,8 @@ public struct BallisticSolution
     public Vector3 Evaluate(float t)
     {
         return origin
-               + velocity * t
-               + 0.5f * Vector3.down * gravity * t * t;
+             + velocity * t
+             + 0.5f * Vector3.down * gravity * t * t;
     }
 }
 
@@ -27,21 +23,24 @@ public class CannonsController : MonoBehaviour
 
     [Header("Firing")]
     public GameObject cannonballPrefab;
-    public int cannonballsPerSide = 8;
-    public float muzzleSpeed = 32f;
-    public float spread = 0.1f;
-    
-    [Header("Arc Settings")]
+    public int cannonballsPerSide = 4;
+
+    [Header("Ballistics")]
     public float minHeight = 2f;
     public float maxHeight = 15f;
     public float heightSensitivity = 10f;
 
+    [Tooltip("Horizontal distance the arc should land at")]
+    public float shotDistance = 40f;
+
     float currentHeight;
+
     bool aimingLeft;
     bool aimingRight;
-    
     bool wasAimingLeft;
     bool wasAimingRight;
+
+    BallisticSolution currentSolution;
 
     void Update()
     {
@@ -54,16 +53,12 @@ public class CannonsController : MonoBehaviour
         bool leftNow  = Input.GetMouseButton(0);
         bool rightNow = Input.GetMouseButton(1);
 
-        // --- RELEASE DETECTION ---
+        // --- RELEASE ---
         if (wasAimingLeft && !leftNow)
-        {
-            FireAlongArc(leftCannonOrigin.position);
-        }
+            FireBroadside(leftCannonOrigin);
 
         if (wasAimingRight && !rightNow)
-        {
-            FireAlongArc(rightCannonOrigin.position);
-        }
+            FireBroadside(rightCannonOrigin);
 
         aimingLeft  = leftNow;
         aimingRight = rightNow;
@@ -71,7 +66,6 @@ public class CannonsController : MonoBehaviour
         wasAimingLeft  = aimingLeft;
         wasAimingRight = aimingRight;
 
-        // --- ARC VISIBILITY ---
         if (!aimingLeft && !aimingRight)
         {
             arcMesh.gameObject.SetActive(false);
@@ -80,70 +74,72 @@ public class CannonsController : MonoBehaviour
 
         arcMesh.gameObject.SetActive(true);
 
-        // --- HEIGHT CONTROL ---
+        // Mouse controls APEX HEIGHT
         float mouseY = Input.GetAxis("Mouse Y");
         currentHeight += mouseY * heightSensitivity * Time.deltaTime;
         currentHeight = Mathf.Clamp(currentHeight, minHeight, maxHeight);
-
     }
 
     void UpdateArc()
     {
         if (aimingLeft)
-        {
-            arcMesh.height = currentHeight;
-            arcMesh.BuildArc(
-                leftCannonOrigin.position,
-                leftCannonOrigin.forward
-            );
-        }
+            BuildSolutionAndPreview(leftCannonOrigin);
+
         else if (aimingRight)
-        {
-            arcMesh.height = currentHeight;
-            arcMesh.BuildArc(
-                rightCannonOrigin.position,
-                rightCannonOrigin.forward
-            );
-        }
+            BuildSolutionAndPreview(rightCannonOrigin);
     }
-    
-    void FireAlongArc(Vector3 fireOrigin)
+
+    void BuildSolutionAndPreview(Transform origin)
     {
+        Vector3 forward = origin.forward;
+
+        currentSolution = BuildSolution(
+            origin.position,
+            forward,
+            shotDistance,
+            currentHeight
+        );
+
+        // Draw preview using SAME solution
+        arcMesh.BuildFromBallisticSolution(currentSolution);
+    }
+
+    void FireBroadside(Transform origin)
+    {
+        Vector3 right =
+            Vector3.Cross(Vector3.up, origin.forward).normalized;
+
+        float halfWidth = arcMesh.meshWidth * 0.5f;
+
         for (int i = 0; i < cannonballsPerSide; i++)
         {
-            // Pick a point along the arc (avoid very start/end)
-            int index = Random.Range(
-                Mathf.RoundToInt(0.2f * arcMesh.resolution),
-                Mathf.RoundToInt(0.8f * arcMesh.resolution)
-            );
+            float t = cannonballsPerSide == 1
+                ? 0.5f
+                : (float)i / (cannonballsPerSide - 1);
 
-            arcMesh.GetArcSample(
-                index,
-                out Vector3 arcPos,
-                out Vector3 arcRight
-            );
+            float lateral =
+                Mathf.Lerp(-halfWidth, halfWidth, t);
 
-            // Spread INSIDE the ribbon
-            float halfWidth = arcMesh.meshWidth * 0.5f;
-            float lateralOffset = Random.Range(-halfWidth, halfWidth);
+            Vector3 spawnPos =
+                origin.position + right * lateral;
 
-            Vector3 target =
-                arcPos + arcRight * lateralOffset;
+            BallisticSolution sol = currentSolution;
+            sol.origin = spawnPos;
 
-            Vector3 dir =
-                (target - fireOrigin).normalized;
-
-            GameObject ball = Instantiate(
-                cannonballPrefab,
-                fireOrigin,
-                Quaternion.identity
-            );
-
-            Rigidbody rb = ball.GetComponent<Rigidbody>();
-            rb.linearVelocity = dir * muzzleSpeed;
+            Fire(sol);
         }
     }
-    
+
+    void Fire(BallisticSolution sol)
+    {
+        GameObject ball =
+            Instantiate(cannonballPrefab, sol.origin, Quaternion.identity);
+
+        Rigidbody rb = ball.GetComponent<Rigidbody>();
+        rb.linearVelocity = sol.velocity;   // 🔑 SAME velocity as preview
+        rb.useGravity = true;
+    }
+
     BallisticSolution BuildSolution(
         Vector3 origin,
         Vector3 forward,
@@ -153,13 +149,9 @@ public class CannonsController : MonoBehaviour
     {
         float g = Physics.gravity.magnitude;
 
-        // Time to reach apex
         float tUp = Mathf.Sqrt(2f * apexHeight / g);
-
-        // Total flight time (symmetric)
         float totalTime = tUp * 2f;
 
-        // Horizontal speed needed to cover distance
         float horizontalSpeed = distance / totalTime;
 
         Vector3 horizontalVel =

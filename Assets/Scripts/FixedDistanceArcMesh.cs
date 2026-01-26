@@ -169,4 +169,57 @@ public class FixedDistanceArcMesh : MonoBehaviour
 
         return lanes;
     }
+    
+    public void BuildFromBallisticSolution(BallisticSolution sol)
+    {
+        transform.position = Vector3.zero;
+        transform.rotation = Quaternion.identity;
+
+        Mesh mesh = GetComponent<MeshFilter>().mesh;
+        mesh.Clear();
+
+        Vector3[] vertices = new Vector3[(resolution + 1) * 2];
+        int[] triangles = new int[resolution * 12];
+
+        float totalTime =
+            (2f * sol.velocity.y) / sol.gravity;
+
+        for (int i = 0; i <= resolution; i++)
+        {
+            float t = (float)i / resolution * totalTime;
+            Vector3 center = sol.Evaluate(t);
+
+            Vector3 next = sol.Evaluate(Mathf.Min(t + 0.01f, totalTime));
+            Vector3 tangent = (next - center).normalized;
+            Vector3 right = Vector3.Cross(Vector3.up, tangent).normalized;
+
+            vertices[i * 2]     = center + right * meshWidth * 0.5f;
+            vertices[i * 2 + 1] = center - right * meshWidth * 0.5f;
+
+            if (i < resolution)
+            {
+                int v = i * 2;
+                int tIdx = i * 12;
+
+                triangles[tIdx + 0] = v;
+                triangles[tIdx + 1] = v + 1;
+                triangles[tIdx + 2] = v + 2;
+                triangles[tIdx + 3] = v + 2;
+                triangles[tIdx + 4] = v + 1;
+                triangles[tIdx + 5] = v + 3;
+
+                triangles[tIdx + 6]  = v;
+                triangles[tIdx + 7]  = v + 2;
+                triangles[tIdx + 8]  = v + 1;
+                triangles[tIdx + 9]  = v + 2;
+                triangles[tIdx + 10] = v + 3;
+                triangles[tIdx + 11] = v + 1;
+            }
+        }
+
+        mesh.vertices = vertices;
+        mesh.triangles = triangles;
+        mesh.RecalculateNormals();
+    }
 }
+
