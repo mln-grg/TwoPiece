@@ -16,6 +16,14 @@ public struct BallisticSolution
 
 public class CannonsController : MonoBehaviour
 {
+    [Header("Shot Variation")]
+    public float lateralSpread = 0.5f;      // meters
+    public float verticalSpread = 0.3f;     // meters
+    public float speedVariance = 0.05f;     // 5%
+    
+    [Header("Firing Count")]
+    public int shotsPerBroadside = 8;
+    
     [Header("References")]
     public FixedDistanceArcMesh arcMesh;
     public Transform leftCannonOrigin;
@@ -111,14 +119,16 @@ public class CannonsController : MonoBehaviour
 
         float halfWidth = arcMesh.meshWidth * 0.5f;
 
-        for (int i = 0; i < cannonballsPerSide; i++)
+        for (int i = 0; i < shotsPerBroadside; i++)
         {
-            float t = cannonballsPerSide == 1
+            // Pick a lane across the broadside
+            float laneT = cannonballsPerSide == 1
                 ? 0.5f
-                : (float)i / (cannonballsPerSide - 1);
+                : (float)Random.Range(0, cannonballsPerSide - 1)
+                  / (cannonballsPerSide - 1);
 
             float lateral =
-                Mathf.Lerp(-halfWidth, halfWidth, t);
+                Mathf.Lerp(-halfWidth, halfWidth, laneT);
 
             Vector3 spawnPos =
                 origin.position + right * lateral;
@@ -132,11 +142,28 @@ public class CannonsController : MonoBehaviour
 
     void Fire(BallisticSolution sol)
     {
+        // --- LATERAL OFFSET (keeps shots inside curtain) ---
+        Vector3 right =
+            Vector3.Cross(Vector3.up, sol.velocity).normalized;
+
+        sol.origin +=
+            right * Random.Range(-lateralSpread, lateralSpread);
+
+        // --- VERTICAL APEX ERROR ---
+        sol.velocity +=
+            Vector3.up * Random.Range(-verticalSpread, verticalSpread);
+
+        // --- SPEED VARIANCE ---
+        float speedScale =
+            1f + Random.Range(-speedVariance, speedVariance);
+
+        sol.velocity *= speedScale;
+
         GameObject ball =
             Instantiate(cannonballPrefab, sol.origin, Quaternion.identity);
 
         Rigidbody rb = ball.GetComponent<Rigidbody>();
-        rb.linearVelocity = sol.velocity;   // 🔑 SAME velocity as preview
+        rb.linearVelocity = sol.velocity;
         rb.useGravity = true;
     }
 

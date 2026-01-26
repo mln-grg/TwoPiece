@@ -6,7 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="13ba1884-45ef-4772-8059-81533df1f1a7" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/Assets/Scripts/CannonsController.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/CannonsController.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/FixedDistanceArcMesh.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/FixedDistanceArcMesh.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -100,7 +99,7 @@
       <workItem from="1769110690231" duration="3293000" />
       <workItem from="1769433059099" duration="933000" />
       <workItem from="1769435882138" duration="10030000" />
-      <workItem from="1769451954328" duration="295000" />
+      <workItem from="1769451954328" duration="602000" />
     </task>
     <servers />
   </component>
