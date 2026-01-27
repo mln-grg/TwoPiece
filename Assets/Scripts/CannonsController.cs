@@ -5,7 +5,7 @@ public struct BallisticSolution
     public Vector3 origin;
     public Vector3 velocity;
     public float gravity;
-    
+
     public Vector3 Evaluate(float t)
     {
         return origin
@@ -30,12 +30,17 @@ public class CannonsController : MonoBehaviour
     public Transform rightCannonOrigin;
     public GameObject cannonballPrefab;
 
+    [Tooltip("Only used for PLAYER preview")]
+    public FixedDistanceArcMesh arcMesh;
+
     [Header("Ballistics")]
     public float shotDistance = 40f;
     public float minHeight = 2f;
     public float maxHeight = 15f;
 
-    // ---------------- PUBLIC API ----------------
+    // =====================================================
+    // PUBLIC API — FIRING
+    // =====================================================
 
     public void FireLeftBroadside()
     {
@@ -57,7 +62,49 @@ public class CannonsController : MonoBehaviour
         FireBroadside(rightCannonOrigin, GetAIApex());
     }
 
-    // ---------------- INTERNAL ----------------
+    // =====================================================
+    // PUBLIC API — PREVIEW (PLAYER ONLY)
+    // =====================================================
+
+    public void PreviewLeft(float apexHeight)
+    {
+        BuildPreview(leftCannonOrigin, apexHeight);
+    }
+
+    public void PreviewRight(float apexHeight)
+    {
+        BuildPreview(rightCannonOrigin, apexHeight);
+    }
+
+    public void HidePreview()
+    {
+        if (arcMesh)
+            arcMesh.gameObject.SetActive(false);
+    }
+
+    // =====================================================
+    // INTERNAL — PREVIEW
+    // =====================================================
+
+    void BuildPreview(Transform origin, float apexHeight)
+    {
+        if (!arcMesh)
+            return;
+
+        BallisticSolution sol = BuildSolution(
+            origin.position,
+            origin.forward,
+            shotDistance,
+            apexHeight
+        );
+
+        arcMesh.gameObject.SetActive(true);
+        arcMesh.BuildFromBallisticSolution(sol);
+    }
+
+    // =====================================================
+    // INTERNAL — FIRING
+    // =====================================================
 
     void FireBroadside(Transform origin, float apexHeight)
     {
@@ -100,7 +147,7 @@ public class CannonsController : MonoBehaviour
             Quaternion.identity
         ).GetComponent<Rigidbody>();
 
-        rb.linearVelocity = sol.velocity;
+        rb.velocity = sol.velocity;
         rb.useGravity = true;
     }
 
@@ -128,5 +175,5 @@ public class CannonsController : MonoBehaviour
     }
 
     float GetDefaultApex() => Mathf.Lerp(minHeight, maxHeight, 0.7f);
-    float GetAIApex() => Mathf.Lerp(minHeight, maxHeight, 0.6f);
+    float GetAIApex()      => Mathf.Lerp(minHeight, maxHeight, 0.6f);
 }
