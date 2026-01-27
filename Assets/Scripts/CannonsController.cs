@@ -5,135 +5,80 @@ public struct BallisticSolution
     public Vector3 origin;
     public Vector3 velocity;
     public float gravity;
-
+    
     public Vector3 Evaluate(float t)
     {
         return origin
-             + velocity * t
-             + 0.5f * Vector3.down * gravity * t * t;
+               + velocity * t
+               + 0.5f * Vector3.down * gravity * t * t;
     }
 }
 
 public class CannonsController : MonoBehaviour
 {
     [Header("Shot Variation")]
-    public float lateralSpread = 0.5f;      // meters
-    public float verticalSpread = 0.3f;     // meters
-    public float speedVariance = 0.05f;     // 5%
-    
+    public float lateralSpread = 0.5f;
+    public float verticalSpread = 0.3f;
+    public float speedVariance = 0.05f;
+
     [Header("Firing Count")]
     public int shotsPerBroadside = 8;
-    
-    [Header("References")]
-    public FixedDistanceArcMesh arcMesh;
-    public Transform leftCannonOrigin;
-    public Transform rightCannonOrigin;
-
-    [Header("Firing")]
-    public GameObject cannonballPrefab;
     public int cannonballsPerSide = 4;
 
+    [Header("References")]
+    public Transform leftCannonOrigin;
+    public Transform rightCannonOrigin;
+    public GameObject cannonballPrefab;
+
     [Header("Ballistics")]
+    public float shotDistance = 40f;
     public float minHeight = 2f;
     public float maxHeight = 15f;
-    public float heightSensitivity = 10f;
 
-    [Tooltip("Horizontal distance the arc should land at")]
-    public float shotDistance = 40f;
+    // ---------------- PUBLIC API ----------------
 
-    float currentHeight;
-
-    bool aimingLeft;
-    bool aimingRight;
-    bool wasAimingLeft;
-    bool wasAimingRight;
-
-    BallisticSolution currentSolution;
-
-    void Update()
+    public void FireLeftBroadside()
     {
-        HandleInput();
-        UpdateArc();
+        FireBroadside(leftCannonOrigin, GetDefaultApex());
     }
 
-    void HandleInput()
+    public void FireRightBroadside()
     {
-        bool leftNow  = Input.GetMouseButton(0);
-        bool rightNow = Input.GetMouseButton(1);
-
-        // --- RELEASE ---
-        if (wasAimingLeft && !leftNow)
-            FireBroadside(leftCannonOrigin);
-
-        if (wasAimingRight && !rightNow)
-            FireBroadside(rightCannonOrigin);
-
-        aimingLeft  = leftNow;
-        aimingRight = rightNow;
-
-        wasAimingLeft  = aimingLeft;
-        wasAimingRight = aimingRight;
-
-        if (!aimingLeft && !aimingRight)
-        {
-            arcMesh.gameObject.SetActive(false);
-            return;
-        }
-
-        arcMesh.gameObject.SetActive(true);
-
-        // Mouse controls APEX HEIGHT
-        float mouseY = Input.GetAxis("Mouse Y");
-        currentHeight += mouseY * heightSensitivity * Time.deltaTime;
-        currentHeight = Mathf.Clamp(currentHeight, minHeight, maxHeight);
+        FireBroadside(rightCannonOrigin, GetDefaultApex());
     }
 
-    void UpdateArc()
+    public void FireLeftBroadsideAI()
     {
-        if (aimingLeft)
-            BuildSolutionAndPreview(leftCannonOrigin);
-
-        else if (aimingRight)
-            BuildSolutionAndPreview(rightCannonOrigin);
+        FireBroadside(leftCannonOrigin, GetAIApex());
     }
 
-    void BuildSolutionAndPreview(Transform origin)
+    public void FireRightBroadsideAI()
     {
-        Vector3 forward = origin.forward;
-
-        currentSolution = BuildSolution(
-            origin.position,
-            forward,
-            shotDistance,
-            currentHeight
-        );
-
-        // Draw preview using SAME solution
-        arcMesh.BuildFromBallisticSolution(currentSolution);
+        FireBroadside(rightCannonOrigin, GetAIApex());
     }
 
-    void FireBroadside(Transform origin)
+    // ---------------- INTERNAL ----------------
+
+    void FireBroadside(Transform origin, float apexHeight)
     {
+        BallisticSolution baseSolution =
+            BuildSolution(origin.position, origin.forward, shotDistance, apexHeight);
+
         Vector3 right =
             Vector3.Cross(Vector3.up, origin.forward).normalized;
 
-        float halfWidth = arcMesh.meshWidth * 0.5f;
+        float halfWidth = 2f;
 
         for (int i = 0; i < shotsPerBroadside; i++)
         {
-            // Pick a lane across the broadside
             float laneT = cannonballsPerSide == 1
                 ? 0.5f
-                : (float)Random.Range(0, cannonballsPerSide - 1)
-                  / (cannonballsPerSide - 1);
-
-            float lateral =
-                Mathf.Lerp(-halfWidth, halfWidth, laneT);
+                : (float)i / (cannonballsPerSide - 1);
 
             Vector3 spawnPos =
-                origin.position + right * lateral;
+                origin.position + right * Mathf.Lerp(-halfWidth, halfWidth, laneT);
 
-            BallisticSolution sol = currentSolution;
+            BallisticSolution sol = baseSolution;
             sol.origin = spawnPos;
 
             Fire(sol);
@@ -142,27 +87,19 @@ public class CannonsController : MonoBehaviour
 
     void Fire(BallisticSolution sol)
     {
-        // --- LATERAL OFFSET (keeps shots inside curtain) ---
         Vector3 right =
             Vector3.Cross(Vector3.up, sol.velocity).normalized;
 
-        sol.origin +=
-            right * Random.Range(-lateralSpread, lateralSpread);
+        sol.origin += right * Random.Range(-lateralSpread, lateralSpread);
+        sol.velocity += Vector3.up * Random.Range(-verticalSpread, verticalSpread);
+        sol.velocity *= 1f + Random.Range(-speedVariance, speedVariance);
 
-        // --- VERTICAL APEX ERROR ---
-        sol.velocity +=
-            Vector3.up * Random.Range(-verticalSpread, verticalSpread);
+        Rigidbody rb = Instantiate(
+            cannonballPrefab,
+            sol.origin,
+            Quaternion.identity
+        ).GetComponent<Rigidbody>();
 
-        // --- SPEED VARIANCE ---
-        float speedScale =
-            1f + Random.Range(-speedVariance, speedVariance);
-
-        sol.velocity *= speedScale;
-
-        GameObject ball =
-            Instantiate(cannonballPrefab, sol.origin, Quaternion.identity);
-
-        Rigidbody rb = ball.GetComponent<Rigidbody>();
         rb.linearVelocity = sol.velocity;
         rb.useGravity = true;
     }
@@ -175,23 +112,21 @@ public class CannonsController : MonoBehaviour
     )
     {
         float g = Physics.gravity.magnitude;
-
         float tUp = Mathf.Sqrt(2f * apexHeight / g);
         float totalTime = tUp * 2f;
 
         float horizontalSpeed = distance / totalTime;
 
-        Vector3 horizontalVel =
-            forward.normalized * horizontalSpeed;
-
-        Vector3 verticalVel =
-            Vector3.up * Mathf.Sqrt(2f * g * apexHeight);
-
         return new BallisticSolution
         {
             origin = origin,
-            velocity = horizontalVel + verticalVel,
+            velocity =
+                forward.normalized * horizontalSpeed +
+                Vector3.up * Mathf.Sqrt(2f * g * apexHeight),
             gravity = g
         };
     }
+
+    float GetDefaultApex() => Mathf.Lerp(minHeight, maxHeight, 0.7f);
+    float GetAIApex() => Mathf.Lerp(minHeight, maxHeight, 0.6f);
 }

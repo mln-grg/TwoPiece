@@ -1,90 +1,91 @@
-using System;
 using UnityEngine;
 
 public enum SailState { NoSail, HalfSail, FullSail }
 
 public class ShipController : MonoBehaviour
 {
-[Header("Speeds")]
+    [Header("Speeds")]
     public float halfSailSpeed = 8f;
     public float fullSailSpeed = 18f;
     public float acceleration = 1.5f;
-    
+
     [Header("Steering & Inertia")]
-    public float turnPower = 20f;      // How hard the rudder pushes
-    public float turnInertia = 0.95f;  // 0 to 1 (Higher = more drift/sliding turn)
-    public float maxTurnSpeed = 25f;   // Speed cap for rotation
+    public float turnPower = 20f;
+    public float turnInertia = 0.95f;
+    public float maxTurnSpeed = 25f;
 
     [Header("Ship Lean (Heel)")]
-    public float leanAmount = 15f;     // Max degrees the ship tilts during a turn
-    public float leanSmoothing = 2f;   // How fast the ship tilts
+    public float leanAmount = 15f;
+    public float leanSmoothing = 2f;
 
-    [Header("Current State")]
+    [Header("State")]
     public SailState currentSail = SailState.NoSail;
-    
-    private float currentForwardSpeed = 0f;
-    private float targetSpeed = 0f;
-    private float currentAngularVelocity = 0f; // This creates the inertia
-    private float currentLean = 0f;
+
+    [Header("Control Input (AI / Player)")]
+    [Range(-1f, 1f)] public float steeringInput;
+    public int sailDelta; // -1 down, +1 up
+
+    float currentForwardSpeed;
+    float currentAngularVelocity;
+    float currentLean;
 
     void Update()
     {
-        HandleInput();
+        ApplySailChange();
         ApplyMovement();
     }
 
-    void HandleInput()
+    void ApplySailChange()
     {
-        // Sail Toggles (W/S)
-        if (Input.GetKeyDown(KeyCode.W))
+        if (sailDelta == 0) return;
+
+        if (sailDelta > 0)
         {
             if (currentSail == SailState.NoSail) currentSail = SailState.HalfSail;
             else if (currentSail == SailState.HalfSail) currentSail = SailState.FullSail;
         }
-        else if (Input.GetKeyDown(KeyCode.S))
+        else
         {
             if (currentSail == SailState.FullSail) currentSail = SailState.HalfSail;
             else if (currentSail == SailState.HalfSail) currentSail = SailState.NoSail;
         }
+
+        sailDelta = 0;
     }
 
     void ApplyMovement()
     {
-        // 1. Forward Momentum
-        switch (currentSail)
-        {
-            case SailState.NoSail: targetSpeed = 0f; break;
-            case SailState.HalfSail: targetSpeed = halfSailSpeed; break;
-            case SailState.FullSail: targetSpeed = fullSailSpeed; break;
-        }
-        currentForwardSpeed = Mathf.MoveTowards(currentForwardSpeed, targetSpeed, acceleration * Time.deltaTime);
+        float targetSpeed =
+            currentSail == SailState.FullSail ? fullSailSpeed :
+            currentSail == SailState.HalfSail ? halfSailSpeed :
+            0f;
+
+        currentForwardSpeed =
+            Mathf.MoveTowards(currentForwardSpeed, targetSpeed, acceleration * Time.deltaTime);
+
         transform.position += transform.forward * currentForwardSpeed * Time.deltaTime;
 
-        // 2. Rotation Inertia (The "Heavy" Turning)
-        float horizontalInput = Input.GetAxis("Horizontal");
-        
-        // If moving, apply force to our angular velocity
-        if (currentForwardSpeed > 0.5f)
+        if (currentForwardSpeed > 0.2f)
         {
-            // We turn slower at high speeds (Black Flag style)
-            float speedTurnPenalty = Mathf.Lerp(1.2f, 0.5f, currentForwardSpeed / fullSailSpeed);
-            currentAngularVelocity += horizontalInput * turnPower * speedTurnPenalty * Time.deltaTime;
+            float speedPenalty =
+                Mathf.Lerp(1.2f, 0.5f, currentForwardSpeed / fullSailSpeed);
+
+            currentAngularVelocity +=
+                steeringInput * turnPower * speedPenalty * Time.deltaTime;
         }
 
-        // Apply friction/drag to the rotation (This makes it eventually stop)
-        currentAngularVelocity *= turnInertia; 
-        currentAngularVelocity = Mathf.Clamp(currentAngularVelocity, -maxTurnSpeed, maxTurnSpeed);
+        currentAngularVelocity *= turnInertia;
+        currentAngularVelocity =
+            Mathf.Clamp(currentAngularVelocity, -maxTurnSpeed, maxTurnSpeed);
 
-        // Apply the rotation to the transform
-        transform.Rotate(0, currentAngularVelocity * Time.deltaTime, 0);
+        transform.Rotate(0f, currentAngularVelocity * Time.deltaTime, 0f);
 
-        // 3. Ship Lean (Visual Heel)
-        // Calculate target lean based on how fast we are currently rotating
-        float targetLean = -(currentAngularVelocity / maxTurnSpeed) * leanAmount;
-        currentLean = Mathf.Lerp(currentLean, targetLean, leanSmoothing * Time.deltaTime);
+        float targetLean =
+            -(currentAngularVelocity / maxTurnSpeed) * leanAmount;
 
-        // Apply lean to the ship's visual rotation
-        // Note: We apply this to the Z axis (Roll)
-        transform.rotation *= Quaternion.Euler(0, 0, currentLean);
+        currentLean =
+            Mathf.Lerp(currentLean, targetLean, leanSmoothing * Time.deltaTime);
+
+        transform.rotation *= Quaternion.Euler(0f, 0f, currentLean);
     }
 }
