@@ -2,18 +2,17 @@ using UnityEngine;
 
 public struct BallisticSolution
 {
-    public Vector3 origin;
-    public Vector3 velocity;
-    public float gravity;
+    public Vector3 Origin;
+    public Vector3 Velocity;
+    public float Gravity;
 
     public Vector3 Evaluate(float t)
     {
-        return origin
-               + velocity * t
-               + 0.5f * Vector3.down * gravity * t * t;
+        return Origin
+               + Velocity * t
+               + 0.5f * Vector3.down * Gravity * t * t;
     }
 }
-
 public class CannonsController : MonoBehaviour
 {
     [Header("Shot Variation")]
@@ -126,7 +125,7 @@ public class CannonsController : MonoBehaviour
                 origin.position + right * Mathf.Lerp(-halfWidth, halfWidth, laneT);
 
             BallisticSolution sol = baseSolution;
-            sol.origin = spawnPos;
+            sol.Origin = spawnPos;
 
             Fire(sol);
         }
@@ -135,19 +134,23 @@ public class CannonsController : MonoBehaviour
     void Fire(BallisticSolution sol)
     {
         Vector3 right =
-            Vector3.Cross(Vector3.up, sol.velocity).normalized;
+            Vector3.Cross(Vector3.up, sol.Velocity).normalized;
 
-        sol.origin += right * Random.Range(-lateralSpread, lateralSpread);
-        sol.velocity += Vector3.up * Random.Range(-verticalSpread, verticalSpread);
-        sol.velocity *= 1f + Random.Range(-speedVariance, speedVariance);
+        sol.Origin += right * Random.Range(-lateralSpread, lateralSpread);
+        sol.Velocity += Vector3.up * Random.Range(-verticalSpread, verticalSpread);
+        sol.Velocity *= 1f + Random.Range(-speedVariance, speedVariance);
 
-        Rigidbody rb = Instantiate(
+        Cannonball ball = Instantiate(
             cannonballPrefab,
-            sol.origin,
+            sol.Origin,
             Quaternion.identity
-        ).GetComponent<Rigidbody>();
+        ).GetComponent<Cannonball>();
 
-        rb.velocity = sol.velocity;
+        ball.Owner = gameObject;
+        
+        Rigidbody rb = ball.gameObject.GetComponent<Rigidbody>();
+
+        rb.linearVelocity = sol.Velocity;
         rb.useGravity = true;
     }
 
@@ -166,11 +169,11 @@ public class CannonsController : MonoBehaviour
 
         return new BallisticSolution
         {
-            origin = origin,
-            velocity =
+            Origin = origin,
+            Velocity =
                 forward.normalized * horizontalSpeed +
                 Vector3.up * Mathf.Sqrt(2f * g * apexHeight),
-            gravity = g
+            Gravity = g
         };
     }
 

@@ -48,5 +48,11 @@ public class PlayerShipInput : MonoBehaviour
 
         if (Input.GetMouseButtonUp(1))
             cannons.FireRightBroadside();
+        
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            ship.TryDash();
+        }
     }
+    
 }
