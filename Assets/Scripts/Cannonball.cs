@@ -1,42 +1,85 @@
 using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody), typeof(Collider))]
 public class Cannonball : MonoBehaviour
 {
     public float lifetime = 10f;
     public float damage = 50f;
+
     public GameObject splashVFX;
     public GameObject hitVFX;
 
-    public float gravityScale = 1.3f;
-    
     Rigidbody rb;
+    bool hasCollided; // prevents double-processing
+
+    public GameObject Owner;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
-        //rb.useGravity = false; // IMPORTANT
     }
+
     void Start()
     {
         Destroy(gameObject, lifetime);
     }
-    void FixedUpdate()
-    {
-        /*rb.AddForce(
-            Physics.gravity * gravityScale,
-            ForceMode.Acceleration
-        );*/
-    }
+
     void OnCollisionEnter(Collision col)
     {
-        if (hitVFX)
-            Instantiate(hitVFX, transform.position, Quaternion.identity);
+        // Prevent double execution (important for projectile-projectile hits)
+        
+        if (col.gameObject.transform.IsChildOf(Owner.transform))
+            return;
+        
+        if (hasCollided)
+            return;
+
+        hasCollided = true;
+
+        // ---------------- PROJECTILE vs PROJECTILE ----------------
+        Cannonball otherBall = col.gameObject.GetComponent<Cannonball>();
+        if (otherBall != null)
+        {
+            // Let the other ball also know it collided
+            otherBall.DestroySelf();
+
+            SpawnHitVFX(col.contacts[0].point);
+            DestroySelf();
+            return;
+        }
+
+        // ---------------- VISUALS ----------------
+        SpawnHitVFX(col.contacts[0].point);
 
         if (splashVFX && col.gameObject.CompareTag("Water"))
-            Instantiate(splashVFX, transform.position, Quaternion.identity);
+            Instantiate(splashVFX, col.contacts[0].point, Quaternion.identity);
 
-        // Damage hook goes here
+        // ---------------- DAMAGE ----------------
+        IDamageable damageable =
+            col.gameObject.GetComponentInParent<IDamageable>();
 
-        //Destroy(gameObject);
+        if (damageable != null)
+        {
+            damageable.TakeDamage(new DamageInfo
+            {
+                amount = damage,
+                hitPoint = col.contacts[0].point,
+                source = gameObject
+            });
+        }
+
+        DestroySelf();
+    }
+
+    void SpawnHitVFX(Vector3 point)
+    {
+        if (hitVFX)
+            Instantiate(hitVFX, point, Quaternion.identity);
+    }
+
+    public void DestroySelf()
+    {
+        if (hasCollided)
+            Destroy(gameObject);
     }
 }

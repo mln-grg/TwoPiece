@@ -182,7 +182,7 @@ public class FixedDistanceArcMesh : MonoBehaviour
         int[] triangles = new int[resolution * 12];
 
         float totalTime =
-            (2f * sol.velocity.y) / sol.gravity;
+            (2f * sol.Velocity.y) / sol.Gravity;
 
         for (int i = 0; i <= resolution; i++)
         {
