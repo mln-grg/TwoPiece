@@ -6,9 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="13ba1884-45ef-4772-8059-81533df1f1a7" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.TwoPiece/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.TwoPiece/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Art/Stylized Pirate Asset Set/Scenes/MiniDemo/MiniDemo.unity" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Art/Stylized Pirate Asset Set/Scenes/MiniDemo/MiniDemo.unity" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Assets/Scripts/CannonsController.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/CannonsController.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/ShipController.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/ShipController.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Scripts/PlayerShipInput.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/PlayerShipInput.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -21,6 +20,7 @@
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/Assets/Scripts/AIShipController.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Assets/Scripts/FixedDistanceArcMesh.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Assets/Scripts/PlayerShipInput.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Assets/Scripts/ShipController.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Assets/Scripts/TrajectoryPreview.cs" root0="FORCE_HIGHLIGHTING" />
   </component>
@@ -105,7 +105,7 @@
       <workItem from="1769435882138" duration="10030000" />
       <workItem from="1769451954328" duration="1341000" />
       <workItem from="1769462485083" duration="1336000" />
-      <workItem from="1769492918024" duration="1614000" />
+      <workItem from="1769492918024" duration="3186000" />
     </task>
     <servers />
   </component>
