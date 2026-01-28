@@ -1,40 +1,36 @@
-﻿using UnityEngine; // Unity core engine
-using UnityEngine.Rendering.HighDefinition; // HDRP-specific rendering
-using Unity.Mathematics; // Unity mathematics library
-using System.Linq; // LINQ support
+﻿using Unity.Mathematics;
+using UnityEngine;
+using UnityEngine.Rendering.HighDefinition;
 
-#if UNITY_EDITOR
-using UnityEditor; // Editor tools
-#endif
-
-[ExecuteInEditMode] // Execute in editor mode
 public class FloatingBoat : MonoBehaviour
 {
-    [Header("Water")] public WaterSurface targetSurface;
+    [Header("Water")]
+    public WaterSurface targetSurface;
     public bool includeDeformers = true;
     public float verticalOffset = 0f;
 
-    [Header("Sampling")] public float length = 4f;
+    [Header("Sampling")]
+    public float length = 4f;
     public float width = 2f;
 
-    [Header("Buoyancy Response")] [Tooltip("How fast the boat follows wave height")]
-    public float heightFollowSpeed = 12f;
+    [Header("Vertical Motion")]
+    public float verticalSpring = 12f;   // stiffness
+    public float verticalDamping = 6f;   // resistance
 
-    [Tooltip("How fast the boat aligns to wave normal")]
-    public float normalFollowSpeed = 8f;
+    [Header("Rotation Response")]
+    public float normalFollowSpeed = 6f;
 
-    [Header("Debug")] public bool showGizmos = true;
+    float verticalVelocity;
+    float currentY;
+    Quaternion currentTilt;
 
-    WaterSearchParameters searchParams = new WaterSearchParameters();
-    WaterSearchResult searchResult = new WaterSearchResult();
-
-    float smoothedY;
-    Quaternion smoothedTilt;
+    WaterSearchParameters searchParams = new();
+    WaterSearchResult searchResult = new();
 
     void OnEnable()
     {
-        smoothedY = transform.position.y;
-        smoothedTilt = Quaternion.identity;
+        currentY = transform.position.y;
+        currentTilt = transform.rotation;
     }
 
     void LateUpdate()
@@ -42,16 +38,14 @@ public class FloatingBoat : MonoBehaviour
         if (!targetSurface)
             return;
 
-        // --- WORLD SPACE SAMPLE POINTS ---
         Vector3 pos = transform.position;
+        Vector3 fwd = transform.forward;
+        Vector3 right = transform.right;
 
-        Vector3 fwd = transform.rotation * Vector3.forward;
-        Vector3 right = transform.rotation * Vector3.right;
-
-        Vector3 bow = pos + fwd * (length * 0.5f);
+        Vector3 bow   = pos + fwd * (length * 0.5f);
         Vector3 stern = pos - fwd * (length * 0.5f);
-        Vector3 left = pos - right * (width * 0.5f);
-        Vector3 rightP = pos + right * (width * 0.5f);
+        Vector3 left  = pos - right * (width * 0.5f);
+        Vector3 rightP= pos + right * (width * 0.5f);
 
         float hBow = SampleHeight(bow);
         float hStern = SampleHeight(stern);
@@ -59,47 +53,47 @@ public class FloatingBoat : MonoBehaviour
         float hRight = SampleHeight(rightP);
         float hCenter = SampleHeight(pos);
 
-        // --- HEIGHT ---
-        float targetY = Mathf.Max(hCenter, (hBow + hStern + hLeft + hRight) * 0.25f);
-        targetY += verticalOffset;
+        // ---------------- HEIGHT (SPRING) ----------------
+        float targetY =
+            Mathf.Max(hCenter, (hBow + hStern + hLeft + hRight) * 0.25f)
+            + verticalOffset;
 
-        smoothedY = Mathf.Lerp(
-            smoothedY,
-            targetY,
-            heightFollowSpeed * Time.deltaTime
-        );
+        float error = targetY - currentY;
 
-        // --- NORMAL ---
-        Vector3 pBow = new Vector3(bow.x, hBow, bow.z);
-        Vector3 pStern = new Vector3(stern.x, hStern, stern.z);
-        Vector3 pLeft = new Vector3(left.x, hLeft, left.z);
-        Vector3 pRight = new Vector3(rightP.x, hRight, rightP.z);
+        verticalVelocity += error * verticalSpring * Time.deltaTime;
+        verticalVelocity -= verticalVelocity * verticalDamping * Time.deltaTime;
+
+        currentY += verticalVelocity * Time.deltaTime;
+
+        // ---------------- NORMAL ----------------
+        Vector3 pBow = new(bow.x, hBow, bow.z);
+        Vector3 pStern = new(stern.x, hStern, stern.z);
+        Vector3 pLeft = new(left.x, hLeft, left.z);
+        Vector3 pRight = new(rightP.x, hRight, rightP.z);
 
         Vector3 forwardDir = (pBow - pStern).normalized;
         Vector3 rightDir = (pRight - pLeft).normalized;
-
         Vector3 waterNormal = Vector3.Cross(forwardDir, rightDir).normalized;
 
-        Quaternion targetTilt = Quaternion.FromToRotation(Vector3.up, waterNormal);
+        Quaternion targetTilt =
+            Quaternion.FromToRotation(Vector3.up, waterNormal);
 
-        smoothedTilt = Quaternion.Slerp(
-            smoothedTilt,
+        currentTilt = Quaternion.Slerp(
+            currentTilt,
             targetTilt,
             normalFollowSpeed * Time.deltaTime
         );
 
-        // --- APPLY (PRESERVE YAW) ---
+        // ---------------- APPLY ----------------
         Vector3 euler = transform.rotation.eulerAngles;
 
-        Quaternion finalRotation = Quaternion.Euler(
-            smoothedTilt.eulerAngles.x,
-            euler.y,
-            smoothedTilt.eulerAngles.z
-        );
-
         transform.SetPositionAndRotation(
-            new Vector3(pos.x, smoothedY, pos.z),
-            finalRotation
+            new Vector3(pos.x, currentY, pos.z),
+            Quaternion.Euler(
+                currentTilt.eulerAngles.x,
+                euler.y,
+                currentTilt.eulerAngles.z
+            )
         );
     }
 
@@ -108,42 +102,10 @@ public class FloatingBoat : MonoBehaviour
         searchParams.startPositionWS = (float3)worldPos;
         searchParams.targetPositionWS = (float3)worldPos;
         searchParams.includeDeformation = includeDeformers;
-        searchParams.maxIterations = 8;
-        searchParams.error = 0.01f;
-        searchParams.excludeSimulation = false;
 
         if (targetSurface.ProjectPointOnWaterSurface(searchParams, out searchResult))
             return searchResult.projectedPositionWS.y;
 
         return worldPos.y;
     }
-
-#if UNITY_EDITOR
-    void OnDrawGizmos() 
-    {
-        if (!showGizmos || !targetSurface)
-            return;
-
-        Gizmos.color = Color.cyan;
-
-        Vector3 pos = transform.position;
-        Quaternion rot = transform.rotation;
-
-        Vector3 fwd = rot * Vector3.forward;
-        Vector3 right = rot * Vector3.right;
-
-        Vector3 bow = pos + fwd * (length * 0.5f);
-        Vector3 stern = pos - fwd * (length * 0.5f);
-        Vector3 left = pos - right * (width * 0.5f);
-        Vector3 rightP = pos + right * (width * 0.5f);
-
-        Gizmos.DrawSphere(bow, 0.08f);
-        Gizmos.DrawSphere(stern, 0.08f);
-        Gizmos.DrawSphere(left, 0.08f);
-        Gizmos.DrawSphere(rightP, 0.08f);
-
-        Gizmos.DrawLine(bow, stern);
-        Gizmos.DrawLine(left, rightP);
-    }
-#endif
 }
