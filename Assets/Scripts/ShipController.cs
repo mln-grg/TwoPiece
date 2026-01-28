@@ -199,14 +199,16 @@ public class ShipController : MonoBehaviour
 
         transform.position += transform.forward * currentForwardSpeed * Time.deltaTime;
 
-        if (currentForwardSpeed > 0.2f)
-        {
-            float speedPenalty =
-                Mathf.Lerp(1.2f, 0.5f, currentForwardSpeed / fullSailSpeed);
+        float speed01 = Mathf.Clamp01(currentForwardSpeed / fullSailSpeed);
 
-            currentAngularVelocity +=
-                steeringInput * turnPower * speedPenalty * Time.deltaTime;
-        }
+// Even at zero speed, allow weak turning
+        float turnEffectiveness = Mathf.Lerp(0.25f, 1f, speed01);
+
+        float speedPenalty =
+            Mathf.Lerp(1.2f, 0.5f, speed01);
+
+        currentAngularVelocity +=
+            steeringInput * turnPower * speedPenalty * turnEffectiveness * Time.deltaTime;
 
         currentAngularVelocity *= turnInertia;
         currentAngularVelocity =
