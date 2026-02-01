@@ -7,10 +7,9 @@
     <list default="true" id="13ba1884-45ef-4772-8059-81533df1f1a7" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.TwoPiece/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.TwoPiece/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Assets/Art/Stylized Pirate Asset Set/Scenes/MiniDemo/MiniDemo.unity" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Art/Stylized Pirate Asset Set/Scenes/MiniDemo/MiniDemo.unity" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Prefabs/cannonball.prefab" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Prefabs/cannonball.prefab" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Cannon.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Cannon.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/Cannonball.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Cannonball.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/CannonsController.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/CannonsController.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Prefabs/PlayerShip.prefab" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Prefabs/PlayerShip.prefab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Scripts/FloatingBoat.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/FloatingBoat.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Scripts/ShipController.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/ShipController.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -26,6 +25,9 @@
     <setting file="file://$PROJECT_DIR$/Assets/Scripts/PlayerShipInput.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Assets/Scripts/ShipController.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/Assets/Scripts/TrajectoryPreview.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Library/PackageCache/com.unity.render-pipelines.high-definition@c910145d3955/Runtime/Water/WaterSurface/WaterSurface.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$USER_HOME$/AppData/Local/Temp/Rar$DIa20792.40414/FloatingBoat.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/DecompilerCache/decompiler/7ae87f906f6d4bf9acf5b1b280b46cb9294800/75/194fc789/WaterSearchParameters.cs" root0="SKIP_HIGHLIGHTING" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
@@ -111,7 +113,7 @@
       <workItem from="1769462485083" duration="1336000" />
       <workItem from="1769492918024" duration="3186000" />
       <workItem from="1769635872388" duration="894000" />
-      <workItem from="1769946422163" duration="10746000" />
+      <workItem from="1769946422163" duration="13271000" />
     </task>
     <servers />
   </component>
