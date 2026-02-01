@@ -80,12 +80,12 @@ public class AIShipController : MonoBehaviour
 
         if (leftAngle < broadsideAngleTolerance)
         {
-            cannons.FireLeftBroadsideAI();
+            //cannons.FireLeftBroadsideAI();
             fireTimer = fireCooldown;
         }
         else if (rightAngle < broadsideAngleTolerance)
         {
-            cannons.FireRightBroadsideAI();
+            //cannons.FireRightBroadsideAI();
             fireTimer = fireCooldown;
         }
     }
