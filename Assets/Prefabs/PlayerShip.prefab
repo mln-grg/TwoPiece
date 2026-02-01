@@ -3570,9 +3570,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &405439647467357493
 GameObject:
   m_ObjectHideFlags: 0
@@ -3876,9 +3873,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &467525319420884450
 GameObject:
   m_ObjectHideFlags: 0
@@ -11361,9 +11355,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &1428050982478590197
 GameObject:
   m_ObjectHideFlags: 0
@@ -21917,9 +21908,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &2599000312433513569
 GameObject:
   m_ObjectHideFlags: 0
@@ -23803,9 +23791,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &2820284013504221854
 GameObject:
   m_ObjectHideFlags: 0
@@ -26677,9 +26662,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &3133601148598435249
 GameObject:
   m_ObjectHideFlags: 0
@@ -26799,9 +26781,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &3160500076226811803
 GameObject:
   m_ObjectHideFlags: 0
@@ -26857,9 +26836,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &3172049309837605391
 GameObject:
   m_ObjectHideFlags: 0
@@ -29437,9 +29413,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &3340432285770219039
 GameObject:
   m_ObjectHideFlags: 0
@@ -30135,9 +30108,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &3449058559818504392
 GameObject:
   m_ObjectHideFlags: 0
@@ -34704,9 +34674,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &3870882661890838242
 GameObject:
   m_ObjectHideFlags: 0
@@ -40646,7 +40613,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &7402871823254621341
 Transform:
   m_ObjectHideFlags: 0
@@ -40669,7 +40636,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4580444738032144061}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 69fe2263915704d46806fdece5cf489e, type: 3}
   m_Name: 
@@ -40693,7 +40660,7 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Size: {x: 3.4, y: 16.56, z: 31.53}
   m_Center: {x: 0, y: 1.2, z: 0}
@@ -43360,9 +43327,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &4906727224129749365
 GameObject:
   m_ObjectHideFlags: 0
@@ -53565,9 +53529,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &5882710997486200620
 GameObject:
   m_ObjectHideFlags: 0
@@ -57087,9 +57048,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &6224506316464840124
 GameObject:
   m_ObjectHideFlags: 0
@@ -57455,9 +57413,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &6285955764527412251
 GameObject:
   m_ObjectHideFlags: 0
@@ -60962,9 +60917,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &6777815288027866411
 GameObject:
   m_ObjectHideFlags: 0
@@ -61599,7 +61551,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &8072898144347003519
 Transform:
   m_ObjectHideFlags: 0
@@ -61622,7 +61574,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6853985691623903856}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 69fe2263915704d46806fdece5cf489e, type: 3}
   m_Name: 
@@ -61646,7 +61598,7 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Size: {x: 9.66, y: 7.67, z: 34.94}
   m_Center: {x: 0, y: 0, z: 0}
@@ -62421,9 +62373,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &7061970515029189918
 GameObject:
   m_ObjectHideFlags: 0
@@ -64118,9 +64067,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &7163366025461062392
 GameObject:
   m_ObjectHideFlags: 0
@@ -64856,9 +64802,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &7267784858458682230
 GameObject:
   m_ObjectHideFlags: 0
@@ -65363,9 +65306,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &7405364442951135517
 GameObject:
   m_ObjectHideFlags: 0
@@ -66006,9 +65946,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &7503508184796891953
 GameObject:
   m_ObjectHideFlags: 0
@@ -70760,9 +70697,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &8276726456281278685
 GameObject:
   m_ObjectHideFlags: 0
@@ -71658,9 +71592,9 @@ MonoBehaviour:
   verticalOffset: 0
   length: 6.61
   width: 2.66
-  heightFollowSpeed: 1
+  verticalSpring: 12
+  verticalDamping: 6
   normalFollowSpeed: 1
-  showGizmos: 1
 --- !u!114 &8242190862056452458
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -71681,9 +71615,16 @@ MonoBehaviour:
   maxTurnSpeed: 25
   leanAmount: 0.1
   leanSmoothing: 2
+  dashSpeed: 35
+  dashDuration: 0.6
+  dashCooldown: 4
   currentSail: 0
   steeringInput: 0
   sailDelta: 0
+  sailHealth: {fileID: 0}
+  hullHealth: {fileID: 0}
+  sailDamageToHullRatio: 1
+  hullDisableThreshold: 30
 --- !u!114 &1048261964065110481
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -71696,18 +71637,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ebf29b1876ec9a340993103e0c191436, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CannonsController
-  lateralSpread: 0.1
-  verticalSpread: 0.1
-  speedVariance: 0.1
-  shotsPerBroadside: 5
-  cannonballsPerSide: 6
+  rowsOfGuns: 3
+  rowsPerShot: 1
+  intervalBetweenRows: 0.15
+  minApex: 3
+  maxApex: 14
+  leftCannons: []
+  rightCannons: []
   leftCannonOrigin: {fileID: 5337561156839747992}
   rightCannonOrigin: {fileID: 5640285866849460357}
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   arcMesh: {fileID: 0}
-  shotDistance: 40
-  minHeight: 2
-  maxHeight: 6
 --- !u!114 &3170914235430874745
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -73447,9 +73387,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &8609222345166825738
 GameObject:
   m_ObjectHideFlags: 0
@@ -74892,9 +74829,6 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
-  recoilDistance: 0.3
-  baseElevationDegrees: 100
 --- !u!1 &8780257884176916136
 GameObject:
   m_ObjectHideFlags: 0
