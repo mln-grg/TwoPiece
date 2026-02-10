@@ -13,8 +13,7 @@ public class Cannonball : MonoBehaviour
     bool hasCollided;
 
     public GameObject Owner;
-
-    // ===== Analytic flight =====
+    
     BallisticSolution solution;
     float flightTime;
     bool analyticFlight;
@@ -28,10 +27,6 @@ public class Cannonball : MonoBehaviour
     {
         Destroy(gameObject, lifetime);
     }
-
-    // =====================================================
-    // INITIALIZATION (called by CannonsController)
-    // =====================================================
 
     public void LaunchAnalytic(BallisticSolution sol)
     {

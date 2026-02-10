@@ -4,26 +4,30 @@ public enum SailState { NoSail, HalfSail, FullSail }
 
 public class ShipController : MonoBehaviour
 {
-    [Header("Speeds")]
-    public float halfSailSpeed = 8f;
-    public float fullSailSpeed = 18f;
+    public float halfSailSpeed = 10f;
+    public float fullSailSpeed = 20f;
+    
+    public float acceleration = 4.0f;
+    
+    public float deceleration = 2.5f;
 
-    [Tooltip("How fast the ship accelerates when increasing sail")]
-    public float acceleration = 1.2f;
-
-    [Tooltip("How fast the ship slows down when reducing sail")]
-    public float deceleration = 3.0f;
-
-    [Header("Steering & Inertia")]
-    public float turnPower = 25f;
-    public float turnInertia = 0.92f;
-    public float maxTurnSpeed = 20f;
+    [Header("Steering")]
+    [Tooltip("Turn speed at low velocity")]
+    public float lowSpeedTurnRate = 45f;
+    
+    [Tooltip("Turn speed at high velocity")]
+    public float highSpeedTurnRate = 28f;
+    
+    public float steeringResponsiveness = 8f;
 
     [Header("Ship Lean (Heel)")]
-    public float leanAmount = 15f;
-    public float leanSmoothing = 2f;
+    public float leanAmount = 12f;
+    public float leanSmoothing = 3f;
+    
+    [Tooltip("Additional lean when turning hard")]
+    public float turnLeanBonus = 8f;
 
-    [Header("Dash")]
+    [Header("Dash/Boost")]
     public float dashSpeed = 35f;
     public float dashDuration = 0.6f;
     public float dashCooldown = 4f;
@@ -47,14 +51,18 @@ public class ShipController : MonoBehaviour
     public float sailDamageToHullRatio = 1f;
 
     public float hullDisableThreshold = 30f;
-
+    
     float currentForwardSpeed;
-    float currentAngularVelocity;
+    float currentTurnSpeed;
+    float smoothedSteeringInput;
     float currentLean;
 
     bool sailsDestroyed;
     bool hullDisabled;
     bool destroyed;
+
+    public float CurrentSpeed => currentForwardSpeed;
+    public float MaxSpeed => fullSailSpeed;
 
     void Update()
     {
@@ -64,11 +72,13 @@ public class ShipController : MonoBehaviour
         ApplyDash();
         ApplyMovement();
     }
-
+    
+    
     // =====================================================
     // SAIL STATE
     // =====================================================
-
+    
+    
     void ApplySailChange()
     {
         if (sailDelta == 0 || sailsDestroyed || hullDisabled)
@@ -128,46 +138,46 @@ public class ShipController : MonoBehaviour
 
         if (!isDashing)
         {
-            float accel =
-                targetSpeed > currentForwardSpeed
-                    ? acceleration     // speeding up
-                    : deceleration;    // slowing down
-
-            currentForwardSpeed =
-                Mathf.MoveTowards(currentForwardSpeed, targetSpeed, accel * Time.deltaTime);
+            // Smooth acceleration/deceleration with curves
+            float accel = targetSpeed > currentForwardSpeed ? acceleration : deceleration;
+            currentForwardSpeed = Mathf.MoveTowards(currentForwardSpeed, targetSpeed, accel * Time.deltaTime);
         }
 
         // Forward motion
         transform.position += transform.forward * currentForwardSpeed * Time.deltaTime;
+        
+        // Smooth steering input for less twitchy feel
+        smoothedSteeringInput = Mathf.Lerp(
+            smoothedSteeringInput, 
+            steeringInput, 
+            steeringResponsiveness * Time.deltaTime
+        );
 
-        // -------------------------------------------------
-        // SPEED-DEPENDENT STEERING (THIS IS THE KEY CHANGE)
-        // -------------------------------------------------
+        // Speed-based turn rate (ships turn BETTER at moderate speed)
+        float speedRatio = currentForwardSpeed / fullSailSpeed;
+        
+        // Create a curve where mid-speed has best turning
+        // 0 speed = poor turning, mid speed = best, high speed = moderate
+        float turnCurve = Mathf.Sin(speedRatio * Mathf.PI) * 1.2f;
+        turnCurve = Mathf.Max(0.3f, turnCurve); // Minimum turn ability even when stopped
+        
+        float effectiveTurnRate = Mathf.Lerp(lowSpeedTurnRate, highSpeedTurnRate, speedRatio) * turnCurve;
 
-        float speed01 = Mathf.Clamp01(currentForwardSpeed / fullSailSpeed);
+        // Apply turning
+        currentTurnSpeed = smoothedSteeringInput * effectiveTurnRate;
+        transform.Rotate(0f, currentTurnSpeed * Time.deltaTime, 0f, Space.World);
+        
 
-        // Non-linear drop in steering authority at speed
-        float steeringAuthority = Mathf.Lerp(1.0f, 0.25f, speed01 * speed01);
+        float steeringIntensity = Mathf.Abs(smoothedSteeringInput);
+        float speedFactor = Mathf.Clamp01(currentForwardSpeed / fullSailSpeed);
+        
+        // More lean at higher speeds when turning
+        float targetLean = -smoothedSteeringInput * (leanAmount + turnLeanBonus * steeringIntensity * speedFactor);
 
-        currentAngularVelocity +=
-            steeringInput * turnPower * steeringAuthority * Time.deltaTime;
-
-        currentAngularVelocity *= turnInertia;
-        currentAngularVelocity =
-            Mathf.Clamp(currentAngularVelocity, -maxTurnSpeed, maxTurnSpeed);
-
-        transform.Rotate(0f, currentAngularVelocity * Time.deltaTime, 0f);
-
-        // -------------------------------------------------
-        // LEAN (HEEL)
-        // -------------------------------------------------
-
-        float targetLean =
-            -(currentAngularVelocity / maxTurnSpeed) * leanAmount;
-
-        currentLean =
-            Mathf.Lerp(currentLean, targetLean, leanSmoothing * Time.deltaTime);
-
-        transform.rotation *= Quaternion.Euler(0f, 0f, currentLean);
+        currentLean = Mathf.Lerp(currentLean, targetLean, leanSmoothing * Time.deltaTime);
+        
+        // Apply lean as local rotation
+        Vector3 currentEuler = transform.localEulerAngles;
+        transform.localRotation = Quaternion.Euler(currentEuler.x, currentEuler.y, currentLean);
     }
 }
