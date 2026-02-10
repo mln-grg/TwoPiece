@@ -101,24 +101,21 @@ public class PlayerShipInput : MonoBehaviour
     {
         if (!shipCamera) return;
 
-        // Get the side we're aiming from based on camera
         ShipCamera.AimSide currentSide = shipCamera.CurrentAimSide;
-        
+
         if (currentSide == ShipCamera.AimSide.None)
             return;
 
-        // Adjust aim pitch with mouse Y (while aiming)
-        // Fixed: Not inverted anymore - up is up, down is down
+        // Adjust aim pitch with mouse Y
         float yInput = Input.GetAxis("Mouse Y");
-        if (!invertY) // Flipped the logic
+        if (!invertY)
             yInput = -yInput;
 
         aimPitch += yInput * cameraSensitivity * 0.5f;
         aimPitch = Mathf.Clamp(aimPitch, minAimAngle, maxAimAngle);
 
-        // Get the appropriate cannon origin point
-        Transform cannonOrigin = currentSide == ShipCamera.AimSide.Left 
-            ? cannons.leftCannonOrigin 
+        Transform cannonOrigin = currentSide == ShipCamera.AimSide.Left
+            ? cannons.leftCannonOrigin
             : cannons.rightCannonOrigin;
 
         if (!cannonOrigin)
@@ -127,26 +124,31 @@ public class PlayerShipInput : MonoBehaviour
             return;
         }
 
-        // Calculate aim direction from the cannon origin, not ship center
-        Vector3 sideDirection = currentSide == ShipCamera.AimSide.Left 
-            ? -transform.right 
-            : transform.right;
-        
-        // Apply pitch to the side direction
-        Vector3 aimDirection = Quaternion.AngleAxis(aimPitch, transform.forward) * sideDirection;
+        // Use aimPitch directly as the cannon launch angle.
+        // Compute where the cannonball would land so the ballistic
+        // solver (SolveToPoint) arrives back at the same angle.
+        float angleRad = aimPitch * Mathf.Deg2Rad;
+        float v = cannons.muzzleVelocity;
+        float g = Physics.gravity.magnitude;
 
-        // Raycast from cannon origin
-        Vector3 rayOrigin = cannonOrigin.position;
-        
-        if (Physics.Raycast(rayOrigin, aimDirection, out RaycastHit hit, maxAimDistance, aimLayers))
-        {
-            currentAimPoint = hit.point;
-        }
-        else
-        {
-            // Use the aim direction properly scaled
-            currentAimPoint = rayOrigin + aimDirection * maxAimDistance;
-        }
+        float vx = v * Mathf.Cos(angleRad);
+        float vy = v * Mathf.Sin(angleRad);
+
+        // Time to hit water (y ~ 0):  originY + vy*t - 0.5*g*t² = 0
+        float originY = cannonOrigin.position.y;
+        float disc = vy * vy + 2f * g * originY;
+        float t = (vy + Mathf.Sqrt(Mathf.Max(disc, 0f))) / g;
+
+        float horizontalDist = vx * t;
+
+        // Flatten side direction to horizontal
+        Vector3 sideDir = currentSide == ShipCamera.AimSide.Left
+            ? -transform.right
+            : transform.right;
+        Vector3 flatSide = new Vector3(sideDir.x, 0f, sideDir.z).normalized;
+
+        currentAimPoint = cannonOrigin.position + flatSide * horizontalDist;
+        currentAimPoint.y = 0f;
     }
 
     void ShowTrajectoryPreview()
