@@ -11,6 +11,10 @@ public class ShipCamera : MonoBehaviour
     [Header("Side Aiming Offsets")]
     public Vector3 leftAimOffset = new Vector3(-12f, 5f, -8f);
     public Vector3 rightAimOffset = new Vector3(12f, 5f, -8f);
+
+    [Header("Side Aiming Rotations (Pitch, Yaw, Roll)")]
+    public Vector3 leftAimRotation = new Vector3(0f, -45f, 0f);
+    public Vector3 rightAimRotation = new Vector3(0f, 45f, 0f);
     
     [Tooltip("How smoothly camera follows ship")]
     public float positionSmoothing = 5f;
@@ -61,12 +65,14 @@ public class ShipCamera : MonoBehaviour
     Camera cam;
     Vector3 currentVelocity;
     Vector2 cameraRotation;
+    float currentRoll;
     AimSide currentAimSide = AimSide.None;
     AimSide targetAimSide = AimSide.None;
 
     // Public getters
     public AimSide CurrentAimSide => currentAimSide;
     public bool IsAiming => isAiming;
+    public bool IsCameraLocked => isAiming; // Camera is locked when aiming
 
     void Awake()
     {
@@ -89,29 +95,42 @@ public class ShipCamera : MonoBehaviour
 
     void UpdateCameraRotation()
     {
-        // Always allow camera control (no middle mouse required)
-        float mouseX = Input.GetAxis("Mouse X") * lookSensitivity;
-        float mouseY = Input.GetAxis("Mouse Y") * lookSensitivity;
-
-        if (invertY)
-            mouseY = -mouseY;
-
-        cameraRotation.x += mouseY;
-        cameraRotation.y += mouseX;
-
-        // Clamp vertical and horizontal rotation
-        cameraRotation.x = Mathf.Clamp(cameraRotation.x, minVerticalAngle, maxVerticalAngle);
-        cameraRotation.y = Mathf.Clamp(cameraRotation.y, -maxHorizontalAngle, maxHorizontalAngle);
-
-        // When entering aim mode, snap to appropriate side
-        if (isAiming && targetAimSide != AimSide.None)
+        // Only allow free camera control when NOT aiming
+        if (!isAiming)
         {
-            float targetYaw = targetAimSide == AimSide.Left ? -45f : 45f;
-            cameraRotation.y = Mathf.Lerp(cameraRotation.y, targetYaw, aimSnapSpeed * Time.deltaTime);
+            float mouseX = Input.GetAxis("Mouse X") * lookSensitivity;
+            float mouseY = Input.GetAxis("Mouse Y") * lookSensitivity;
+
+            if (invertY)
+                mouseY = -mouseY;
+
+            cameraRotation.x += mouseY;
+            cameraRotation.y += mouseX;
+
+            // Clamp vertical and horizontal rotation
+            cameraRotation.x = Mathf.Clamp(cameraRotation.x, minVerticalAngle, maxVerticalAngle);
+            cameraRotation.y = Mathf.Clamp(cameraRotation.y, -maxHorizontalAngle, maxHorizontalAngle);
+        }
+        else
+        {
+            // When in aim mode, lock camera to side rotation
+            if (targetAimSide != AimSide.None)
+            {
+                Vector3 aimRot = targetAimSide == AimSide.Left ? leftAimRotation : rightAimRotation;
+                cameraRotation.y = Mathf.Lerp(cameraRotation.y, aimRot.y, aimSnapSpeed * Time.deltaTime);
+                cameraRotation.x = Mathf.Lerp(cameraRotation.x, aimRot.x, aimSnapSpeed * Time.deltaTime);
+            }
         }
 
         // Target rotation follows ship with camera offset
-        Quaternion targetRotation = ship.rotation * Quaternion.Euler(-cameraRotation.x, cameraRotation.y, 0f);
+        float targetRoll = 0f;
+        if (isAiming && targetAimSide != AimSide.None)
+        {
+            Vector3 aimRot = targetAimSide == AimSide.Left ? leftAimRotation : rightAimRotation;
+            targetRoll = aimRot.z;
+        }
+        currentRoll = Mathf.Lerp(currentRoll, targetRoll, aimSnapSpeed * Time.deltaTime);
+        Quaternion targetRotation = ship.rotation * Quaternion.Euler(-cameraRotation.x, cameraRotation.y, currentRoll);
 
         // Smooth rotation
         transform.rotation = Quaternion.Slerp(

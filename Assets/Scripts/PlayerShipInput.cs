@@ -101,34 +101,51 @@ public class PlayerShipInput : MonoBehaviour
     {
         if (!shipCamera) return;
 
-        // Adjust aim pitch with mouse Y (while aiming)
-        float yInput = Input.GetAxis("Mouse Y");
-        if (invertY) yInput = -yInput;
-
-        aimPitch += yInput * cameraSensitivity * 0.5f; // Reduced for finer control
-        aimPitch = Mathf.Clamp(aimPitch, minAimAngle, maxAimAngle);
-
         // Get the side we're aiming from based on camera
         ShipCamera.AimSide currentSide = shipCamera.CurrentAimSide;
         
         if (currentSide == ShipCamera.AimSide.None)
             return;
 
-        // Calculate aim direction from appropriate side
+        // Adjust aim pitch with mouse Y (while aiming)
+        // Fixed: Not inverted anymore - up is up, down is down
+        float yInput = Input.GetAxis("Mouse Y");
+        if (!invertY) // Flipped the logic
+            yInput = -yInput;
+
+        aimPitch += yInput * cameraSensitivity * 0.5f;
+        aimPitch = Mathf.Clamp(aimPitch, minAimAngle, maxAimAngle);
+
+        // Get the appropriate cannon origin point
+        Transform cannonOrigin = currentSide == ShipCamera.AimSide.Left 
+            ? cannons.leftCannonOrigin 
+            : cannons.rightCannonOrigin;
+
+        if (!cannonOrigin)
+        {
+            Debug.LogWarning("Cannon origin not set!");
+            return;
+        }
+
+        // Calculate aim direction from the cannon origin, not ship center
         Vector3 sideDirection = currentSide == ShipCamera.AimSide.Left 
             ? -transform.right 
             : transform.right;
         
+        // Apply pitch to the side direction
         Vector3 aimDirection = Quaternion.AngleAxis(aimPitch, transform.forward) * sideDirection;
 
-        // Raycast to find aim point
-        if (Physics.Raycast(transform.position, aimDirection, out RaycastHit hit, maxAimDistance, aimLayers))
+        // Raycast from cannon origin
+        Vector3 rayOrigin = cannonOrigin.position;
+        
+        if (Physics.Raycast(rayOrigin, aimDirection, out RaycastHit hit, maxAimDistance, aimLayers))
         {
             currentAimPoint = hit.point;
         }
         else
         {
-            currentAimPoint = transform.position + aimDirection * maxAimDistance;
+            // Use the aim direction properly scaled
+            currentAimPoint = rayOrigin + aimDirection * maxAimDistance;
         }
     }
 
@@ -164,5 +181,25 @@ public class PlayerShipInput : MonoBehaviour
                 cannons.FireRightBroadsideAtPoint(currentAimPoint);
                 break;
         }
+    }
+
+    // Debug visualization
+    void OnDrawGizmos()
+    {
+        if (!shipCamera || !shipCamera.IsAiming) return;
+
+        ShipCamera.AimSide currentSide = shipCamera.CurrentAimSide;
+        if (currentSide == ShipCamera.AimSide.None) return;
+
+        Transform cannonOrigin = currentSide == ShipCamera.AimSide.Left 
+            ? cannons.leftCannonOrigin 
+            : cannons.rightCannonOrigin;
+
+        if (!cannonOrigin) return;
+
+        // Draw aim ray
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawLine(cannonOrigin.position, currentAimPoint);
+        Gizmos.DrawSphere(currentAimPoint, 0.5f);
     }
 }
