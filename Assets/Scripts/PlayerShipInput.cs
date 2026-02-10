@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 [RequireComponent(typeof(ShipController))]
@@ -5,11 +6,10 @@ using UnityEngine;
 public class PlayerShipInput : MonoBehaviour
 {
     [Header("References")]
-    public Camera playerCamera;
-    public Transform aimReticle; // UI element or world space crosshair
+    public ShipCamera shipCamera;
 
     [Header("Aiming")]
-    public LayerMask aimLayers; // What can be targeted (water, ships, etc.)
+    public LayerMask aimLayers;
     public float maxAimDistance = 100f;
     
     [Tooltip("How far up/down you can aim")]
@@ -25,24 +25,28 @@ public class PlayerShipInput : MonoBehaviour
 
     // Aim state
     Vector3 currentAimPoint;
-    bool isAimingLeft;
-    bool isAimingRight;
-    float aimPitch; // Vertical aim angle
+    float aimPitch;
+    bool wasAiming;
 
     void Awake()
     {
         ship = GetComponent<ShipController>();
         cannons = GetComponent<CannonsController>();
 
-        if (!playerCamera)
-            playerCamera = Camera.main;
+        if (!shipCamera)
+            shipCamera = FindObjectOfType<ShipCamera>();
+    }
+
+    private void Start()
+    {
+        Cursor.visible = false;
+        Cursor.lockState = CursorLockMode.Locked;
     }
 
     void Update()
     {
         HandleMovementInput();
-        HandleAimingInput();
-        HandleFiring();
+        HandleAimingAndFiring();
     }
 
     void HandleMovementInput()
@@ -59,85 +63,106 @@ public class PlayerShipInput : MonoBehaviour
             ship.TryDash();
     }
 
-    void HandleAimingInput()
+    void HandleAimingAndFiring()
     {
-        bool leftAim = Input.GetMouseButton(0);
-        bool rightAim = Input.GetMouseButton(1);
+        bool aimButton = Input.GetMouseButton(1); // RMB to aim
+        bool fireButton = Input.GetMouseButtonDown(0); // LMB to fire
 
-        isAimingLeft = leftAim;
-        isAimingRight = rightAim;
-
-        if (leftAim || rightAim)
+        // Enter/Exit aim mode
+        if (aimButton && !wasAiming)
         {
-            // Adjust aim pitch with mouse Y
-            float yInput = Input.GetAxis("Mouse Y");
-            if (invertY) yInput = -yInput;
-
-            aimPitch += yInput * cameraSensitivity;
-            aimPitch = Mathf.Clamp(aimPitch, minAimAngle, maxAimAngle);
-
-            // Calculate aim direction
-            Vector3 sideDirection = leftAim ? -transform.right : transform.right;
-            Vector3 aimDirection = Quaternion.AngleAxis(aimPitch, transform.forward) * sideDirection;
-
-            // Raycast to find aim point
-            if (Physics.Raycast(transform.position, aimDirection, out RaycastHit hit, maxAimDistance, aimLayers))
-            {
-                currentAimPoint = hit.point;
-            }
-            else
-            {
-                currentAimPoint = transform.position + aimDirection * maxAimDistance;
-            }
-
-            // Update reticle position
-            if (aimReticle)
-            {
-                aimReticle.position = currentAimPoint;
-                aimReticle.gameObject.SetActive(true);
-            }
-
-            // Show trajectory preview
-            if (leftAim)
-                cannons.PreviewLeftToPoint(currentAimPoint);
-            else
-                cannons.PreviewRightToPoint(currentAimPoint);
+            if (shipCamera)
+                shipCamera.EnterAimMode();
+            wasAiming = true;
         }
-        else
+        else if (!aimButton && wasAiming)
         {
-            // Hide aiming UI
+            if (shipCamera)
+                shipCamera.ExitAimMode();
             cannons.HidePreview();
-            
-            if (aimReticle)
-                aimReticle.gameObject.SetActive(false);
+            wasAiming = false;
+        }
 
-            // Reset pitch when not aiming
-            aimPitch = Mathf.Lerp(aimPitch, 0f, 5f * Time.deltaTime);
+        // While aiming, update trajectory preview
+        if (aimButton)
+        {
+            UpdateAimPoint();
+            ShowTrajectoryPreview();
+        }
+
+        // Fire when LMB pressed while holding RMB
+        if (fireButton && aimButton)
+        {
+            FireCurrentSide();
         }
     }
 
-    void HandleFiring()
+    void UpdateAimPoint()
     {
-        // Fire on release (or you could change to fire on press)
-        if (Input.GetMouseButtonUp(0))
-        {
-            cannons.FireLeftBroadsideAtPoint(currentAimPoint);
-        }
+        if (!shipCamera) return;
 
-        if (Input.GetMouseButtonUp(1))
-        {
-            cannons.FireRightBroadsideAtPoint(currentAimPoint);
-        }
+        // Adjust aim pitch with mouse Y (while aiming)
+        float yInput = Input.GetAxis("Mouse Y");
+        if (invertY) yInput = -yInput;
 
-        // Alternative: Quick fire keys for non-aimed shots
-        if (Input.GetKeyDown(KeyCode.Q))
-        {
-            cannons.FireLeftBroadside();
-        }
+        aimPitch += yInput * cameraSensitivity * 0.5f; // Reduced for finer control
+        aimPitch = Mathf.Clamp(aimPitch, minAimAngle, maxAimAngle);
 
-        if (Input.GetKeyDown(KeyCode.E))
+        // Get the side we're aiming from based on camera
+        ShipCamera.AimSide currentSide = shipCamera.CurrentAimSide;
+        
+        if (currentSide == ShipCamera.AimSide.None)
+            return;
+
+        // Calculate aim direction from appropriate side
+        Vector3 sideDirection = currentSide == ShipCamera.AimSide.Left 
+            ? -transform.right 
+            : transform.right;
+        
+        Vector3 aimDirection = Quaternion.AngleAxis(aimPitch, transform.forward) * sideDirection;
+
+        // Raycast to find aim point
+        if (Physics.Raycast(transform.position, aimDirection, out RaycastHit hit, maxAimDistance, aimLayers))
         {
-            cannons.FireRightBroadside();
+            currentAimPoint = hit.point;
+        }
+        else
+        {
+            currentAimPoint = transform.position + aimDirection * maxAimDistance;
+        }
+    }
+
+    void ShowTrajectoryPreview()
+    {
+        if (!shipCamera) return;
+
+        ShipCamera.AimSide currentSide = shipCamera.CurrentAimSide;
+
+        switch (currentSide)
+        {
+            case ShipCamera.AimSide.Left:
+                cannons.PreviewLeftToPoint(currentAimPoint);
+                break;
+            case ShipCamera.AimSide.Right:
+                cannons.PreviewRightToPoint(currentAimPoint);
+                break;
+        }
+    }
+
+    void FireCurrentSide()
+    {
+        if (!shipCamera) return;
+
+        ShipCamera.AimSide currentSide = shipCamera.CurrentAimSide;
+
+        switch (currentSide)
+        {
+            case ShipCamera.AimSide.Left:
+                cannons.FireLeftBroadsideAtPoint(currentAimPoint);
+                break;
+            case ShipCamera.AimSide.Right:
+                cannons.FireRightBroadsideAtPoint(currentAimPoint);
+                break;
         }
     }
 }

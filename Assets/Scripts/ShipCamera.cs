@@ -7,7 +7,10 @@ public class ShipCamera : MonoBehaviour
 
     [Header("Camera Position")]
     public Vector3 normalOffset = new Vector3(0f, 8f, -15f);
-    public Vector3 aimOffset = new Vector3(0f, 6f, -10f);
+    
+    [Header("Side Aiming Offsets")]
+    public Vector3 leftAimOffset = new Vector3(-12f, 5f, -8f);
+    public Vector3 rightAimOffset = new Vector3(12f, 5f, -8f);
     
     [Tooltip("How smoothly camera follows ship")]
     public float positionSmoothing = 5f;
@@ -18,6 +21,15 @@ public class ShipCamera : MonoBehaviour
     [Header("Camera Control")]
     public float lookSensitivity = 2f;
     public bool invertY = false;
+    
+    [Tooltip("Max angle camera can look up")]
+    public float maxVerticalAngle = 45f;
+    
+    [Tooltip("Max angle camera can look down")]
+    public float minVerticalAngle = -30f;
+    
+    [Tooltip("Max angle camera can rotate left/right")]
+    public float maxHorizontalAngle = 60f;
 
     [Header("Aim Mode")]
     public bool isAiming;
@@ -30,6 +42,9 @@ public class ShipCamera : MonoBehaviour
     
     [Tooltip("How fast FOV transitions")]
     public float fovSpeed = 8f;
+    
+    [Tooltip("How fast camera snaps to side when entering aim mode")]
+    public float aimSnapSpeed = 10f;
 
     [Header("Dynamic Camera")]
     public bool dynamicCamera = true;
@@ -37,9 +52,21 @@ public class ShipCamera : MonoBehaviour
     [Tooltip("Extra offset based on ship speed")]
     public float speedOffsetMultiplier = 0.5f;
 
+    [Header("Side Detection")]
+    [Tooltip("Angle threshold to determine left vs right")]
+    public float sideThreshold = 15f;
+
+    public enum AimSide { None, Left, Right }
+    
     Camera cam;
     Vector3 currentVelocity;
     Vector2 cameraRotation;
+    AimSide currentAimSide = AimSide.None;
+    AimSide targetAimSide = AimSide.None;
+
+    // Public getters
+    public AimSide CurrentAimSide => currentAimSide;
+    public bool IsAiming => isAiming;
 
     void Awake()
     {
@@ -54,62 +81,36 @@ public class ShipCamera : MonoBehaviour
         if (!ship)
             return;
 
-        UpdateCameraPosition();
         UpdateCameraRotation();
+        DetermineSideFromCamera();
+        UpdateCameraPosition();
         UpdateFieldOfView();
-    }
-
-    void UpdateCameraPosition()
-    {
-        // Choose offset based on aim state
-        Vector3 targetOffset = isAiming ? aimOffset : normalOffset;
-
-        // Add dynamic offset based on ship speed
-        if (dynamicCamera)
-        {
-            ShipController shipController = ship.GetComponent<ShipController>();
-            if (shipController)
-            {
-                float speedRatio = shipController.CurrentSpeed / shipController.MaxSpeed;
-                targetOffset.z -= speedRatio * speedOffsetMultiplier;
-            }
-        }
-
-        // Calculate target position in world space
-        Vector3 targetPos = ship.TransformPoint(targetOffset);
-
-        // Smooth follow
-        transform.position = Vector3.SmoothDamp(
-            transform.position,
-            targetPos,
-            ref currentVelocity,
-            1f / positionSmoothing
-        );
     }
 
     void UpdateCameraRotation()
     {
-        // Get free look input (optional - can be disabled for simpler camera)
-        if (Input.GetMouseButton(2)) // Middle mouse for free look
+        // Always allow camera control (no middle mouse required)
+        float mouseX = Input.GetAxis("Mouse X") * lookSensitivity;
+        float mouseY = Input.GetAxis("Mouse Y") * lookSensitivity;
+
+        if (invertY)
+            mouseY = -mouseY;
+
+        cameraRotation.x += mouseY;
+        cameraRotation.y += mouseX;
+
+        // Clamp vertical and horizontal rotation
+        cameraRotation.x = Mathf.Clamp(cameraRotation.x, minVerticalAngle, maxVerticalAngle);
+        cameraRotation.y = Mathf.Clamp(cameraRotation.y, -maxHorizontalAngle, maxHorizontalAngle);
+
+        // When entering aim mode, snap to appropriate side
+        if (isAiming && targetAimSide != AimSide.None)
         {
-            float mouseX = Input.GetAxis("Mouse X") * lookSensitivity;
-            float mouseY = Input.GetAxis("Mouse Y") * lookSensitivity;
-
-            if (invertY)
-                mouseY = -mouseY;
-
-            cameraRotation.x += mouseY;
-            cameraRotation.y += mouseX;
-
-            cameraRotation.x = Mathf.Clamp(cameraRotation.x, -30f, 45f);
-        }
-        else
-        {
-            // Return to neutral when not free-looking
-            cameraRotation = Vector2.Lerp(cameraRotation, Vector2.zero, Time.deltaTime * 3f);
+            float targetYaw = targetAimSide == AimSide.Left ? -45f : 45f;
+            cameraRotation.y = Mathf.Lerp(cameraRotation.y, targetYaw, aimSnapSpeed * Time.deltaTime);
         }
 
-        // Target rotation follows ship with free look offset
+        // Target rotation follows ship with camera offset
         Quaternion targetRotation = ship.rotation * Quaternion.Euler(-cameraRotation.x, cameraRotation.y, 0f);
 
         // Smooth rotation
@@ -117,6 +118,74 @@ public class ShipCamera : MonoBehaviour
             transform.rotation,
             targetRotation,
             rotationSmoothing * Time.deltaTime
+        );
+    }
+
+    void DetermineSideFromCamera()
+    {
+        // Determine which side the camera is looking at based on horizontal rotation
+        if (isAiming)
+        {
+            if (cameraRotation.y < -sideThreshold)
+                currentAimSide = AimSide.Left;
+            else if (cameraRotation.y > sideThreshold)
+                currentAimSide = AimSide.Right;
+            else
+                currentAimSide = targetAimSide; // Keep current side in deadzone
+        }
+        else
+        {
+            currentAimSide = AimSide.None;
+        }
+    }
+
+    void UpdateCameraPosition()
+    {
+        Vector3 targetOffset;
+
+        if (isAiming)
+        {
+            // Use side-specific offset when aiming
+            switch (currentAimSide)
+            {
+                case AimSide.Left:
+                    targetOffset = leftAimOffset;
+                    break;
+                case AimSide.Right:
+                    targetOffset = rightAimOffset;
+                    break;
+                default:
+                    targetOffset = normalOffset;
+                    break;
+            }
+        }
+        else
+        {
+            targetOffset = normalOffset;
+            
+            // Add dynamic offset based on ship speed when not aiming
+            if (dynamicCamera)
+            {
+                ShipController shipController = ship.GetComponent<ShipController>();
+                if (shipController)
+                {
+                    float speedRatio = shipController.CurrentSpeed / shipController.MaxSpeed;
+                    targetOffset.z -= speedRatio * speedOffsetMultiplier;
+                }
+            }
+        }
+
+        // Calculate target position in world space
+        Vector3 targetPos = ship.TransformPoint(targetOffset);
+
+        // Smooth follow (faster when aiming)
+        float smoothing = isAiming ? positionSmoothing * 1.5f : positionSmoothing;
+        
+        transform.position = Vector3.SmoothDamp(
+            transform.position,
+            targetPos,
+            ref currentVelocity,
+            1f / smoothing
         );
     }
 
@@ -128,8 +197,23 @@ public class ShipCamera : MonoBehaviour
         cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, targetFOV, fovSpeed * Time.deltaTime);
     }
 
-    public void SetAiming(bool aiming)
+    public void EnterAimMode()
     {
-        isAiming = aiming;
+        isAiming = true;
+        
+        // Determine which side to snap to based on current camera angle
+        if (cameraRotation.y < 0f)
+            targetAimSide = AimSide.Left;
+        else
+            targetAimSide = AimSide.Right;
+        
+        currentAimSide = targetAimSide;
+    }
+
+    public void ExitAimMode()
+    {
+        isAiming = false;
+        currentAimSide = AimSide.None;
+        targetAimSide = AimSide.None;
     }
 }
