@@ -11,10 +11,14 @@ public class ShipCamera : MonoBehaviour
     [Header("Side Aiming Offsets")]
     public Vector3 leftAimOffset = new Vector3(-12f, 5f, -8f);
     public Vector3 rightAimOffset = new Vector3(12f, 5f, -8f);
+    public Vector3 frontAimOffset = new Vector3(0f, 6f, 5f);
+    public Vector3 backAimOffset = new Vector3(0f, 6f, -20f);
 
     [Header("Side Aiming Rotations (Pitch, Yaw, Roll)")]
     public Vector3 leftAimRotation = new Vector3(0f, -45f, 0f);
     public Vector3 rightAimRotation = new Vector3(0f, 45f, 0f);
+    public Vector3 frontAimRotation = new Vector3(0f, 0f, 0f);
+    public Vector3 backAimRotation = new Vector3(0f, 180f, 0f);
     
     [Tooltip("How smoothly camera follows ship")]
     public float positionSmoothing = 5f;
@@ -32,8 +36,11 @@ public class ShipCamera : MonoBehaviour
     [Tooltip("Max angle camera can look down")]
     public float minVerticalAngle = -30f;
     
-    [Tooltip("Max angle camera can rotate left/right")]
+    [Tooltip("Max angle camera can rotate left/right (ignored in aim mode)")]
     public float maxHorizontalAngle = 60f;
+    
+    [Tooltip("Allow camera to rotate 360° when not aiming")]
+    public bool allow360Rotation = true;
 
     [Header("Aim Mode")]
     public bool isAiming;
@@ -57,10 +64,10 @@ public class ShipCamera : MonoBehaviour
     public float speedOffsetMultiplier = 0.5f;
 
     [Header("Side Detection")]
-    [Tooltip("Angle threshold to determine left vs right")]
+    [Tooltip("Angle threshold to determine which side (used for left/right, front/back)")]
     public float sideThreshold = 15f;
 
-    public enum AimSide { None, Left, Right }
+    public enum AimSide { None, Left, Right, Front, Back }
     
     Camera cam;
     Vector3 currentVelocity;
@@ -72,7 +79,7 @@ public class ShipCamera : MonoBehaviour
     // Public getters
     public AimSide CurrentAimSide => currentAimSide;
     public bool IsAiming => isAiming;
-    public bool IsCameraLocked => isAiming; // Camera is locked when aiming
+    public bool IsCameraLocked => isAiming;
 
     void Awake()
     {
@@ -107,16 +114,30 @@ public class ShipCamera : MonoBehaviour
             cameraRotation.x += mouseY;
             cameraRotation.y += mouseX;
 
-            // Clamp vertical and horizontal rotation
+            // Clamp vertical rotation
             cameraRotation.x = Mathf.Clamp(cameraRotation.x, minVerticalAngle, maxVerticalAngle);
-            cameraRotation.y = Mathf.Clamp(cameraRotation.y, -maxHorizontalAngle, maxHorizontalAngle);
+            
+            // Horizontal rotation handling
+            if (allow360Rotation)
+            {
+                // Wrap around 360 degrees
+                if (cameraRotation.y > 180f)
+                    cameraRotation.y -= 360f;
+                else if (cameraRotation.y < -180f)
+                    cameraRotation.y += 360f;
+            }
+            else
+            {
+                // Clamp to limited angle
+                cameraRotation.y = Mathf.Clamp(cameraRotation.y, -maxHorizontalAngle, maxHorizontalAngle);
+            }
         }
         else
         {
             // When in aim mode, lock camera to side rotation
             if (targetAimSide != AimSide.None)
             {
-                Vector3 aimRot = targetAimSide == AimSide.Left ? leftAimRotation : rightAimRotation;
+                Vector3 aimRot = GetAimRotation(targetAimSide);
                 cameraRotation.y = Mathf.Lerp(cameraRotation.y, aimRot.y, aimSnapSpeed * Time.deltaTime);
                 cameraRotation.x = Mathf.Lerp(cameraRotation.x, aimRot.x, aimSnapSpeed * Time.deltaTime);
             }
@@ -126,7 +147,7 @@ public class ShipCamera : MonoBehaviour
         float targetRoll = 0f;
         if (isAiming && targetAimSide != AimSide.None)
         {
-            Vector3 aimRot = targetAimSide == AimSide.Left ? leftAimRotation : rightAimRotation;
+            Vector3 aimRot = GetAimRotation(targetAimSide);
             targetRoll = aimRot.z;
         }
         currentRoll = Mathf.Lerp(currentRoll, targetRoll, aimSnapSpeed * Time.deltaTime);
@@ -145,12 +166,37 @@ public class ShipCamera : MonoBehaviour
         // Determine which side the camera is looking at based on horizontal rotation
         if (isAiming)
         {
-            if (cameraRotation.y < -sideThreshold)
-                currentAimSide = AimSide.Left;
-            else if (cameraRotation.y > sideThreshold)
+            // Normalize angle to -180 to 180 range
+            float normalizedAngle = cameraRotation.y;
+            while (normalizedAngle > 180f) normalizedAngle -= 360f;
+            while (normalizedAngle < -180f) normalizedAngle += 360f;
+            
+            // Front: -sideThreshold to +sideThreshold
+            // Right: sideThreshold to (90 - sideThreshold)
+            // Back: (90 + sideThreshold) to (180) and (-180) to (-90 - sideThreshold)
+            // Left: (-90 + sideThreshold) to -sideThreshold
+            
+            if (normalizedAngle >= -sideThreshold && normalizedAngle <= sideThreshold)
+            {
+                currentAimSide = AimSide.Front;
+            }
+            else if (normalizedAngle > sideThreshold && normalizedAngle < 90f - sideThreshold)
+            {
                 currentAimSide = AimSide.Right;
+            }
+            else if (normalizedAngle < -sideThreshold && normalizedAngle > -90f + sideThreshold)
+            {
+                currentAimSide = AimSide.Left;
+            }
+            else if (Mathf.Abs(normalizedAngle) > 90f + sideThreshold)
+            {
+                currentAimSide = AimSide.Back;
+            }
             else
-                currentAimSide = targetAimSide; // Keep current side in deadzone
+            {
+                // In deadzone, keep current side
+                currentAimSide = targetAimSide;
+            }
         }
         else
         {
@@ -165,18 +211,7 @@ public class ShipCamera : MonoBehaviour
         if (isAiming)
         {
             // Use side-specific offset when aiming
-            switch (currentAimSide)
-            {
-                case AimSide.Left:
-                    targetOffset = leftAimOffset;
-                    break;
-                case AimSide.Right:
-                    targetOffset = rightAimOffset;
-                    break;
-                default:
-                    targetOffset = normalOffset;
-                    break;
-            }
+            targetOffset = GetAimOffset(currentAimSide);
         }
         else
         {
@@ -221,10 +256,20 @@ public class ShipCamera : MonoBehaviour
         isAiming = true;
         
         // Determine which side to snap to based on current camera angle
-        if (cameraRotation.y < 0f)
+        // Normalize angle to -180 to 180 range
+        float normalizedAngle = cameraRotation.y;
+        while (normalizedAngle > 180f) normalizedAngle -= 360f;
+        while (normalizedAngle < -180f) normalizedAngle += 360f;
+        
+        // Snap to nearest cardinal direction
+        if (normalizedAngle >= -45f && normalizedAngle <= 45f)
+            targetAimSide = AimSide.Front;
+        else if (normalizedAngle > 45f && normalizedAngle <= 135f)
+            targetAimSide = AimSide.Right;
+        else if (normalizedAngle < -45f && normalizedAngle >= -135f)
             targetAimSide = AimSide.Left;
         else
-            targetAimSide = AimSide.Right;
+            targetAimSide = AimSide.Back;
         
         currentAimSide = targetAimSide;
     }
@@ -234,5 +279,29 @@ public class ShipCamera : MonoBehaviour
         isAiming = false;
         currentAimSide = AimSide.None;
         targetAimSide = AimSide.None;
+    }
+    
+    Vector3 GetAimOffset(AimSide side)
+    {
+        switch (side)
+        {
+            case AimSide.Left: return leftAimOffset;
+            case AimSide.Right: return rightAimOffset;
+            case AimSide.Front: return frontAimOffset;
+            case AimSide.Back: return backAimOffset;
+            default: return normalOffset;
+        }
+    }
+    
+    Vector3 GetAimRotation(AimSide side)
+    {
+        switch (side)
+        {
+            case AimSide.Left: return leftAimRotation;
+            case AimSide.Right: return rightAimRotation;
+            case AimSide.Front: return frontAimRotation;
+            case AimSide.Back: return backAimRotation;
+            default: return Vector3.zero;
+        }
     }
 }

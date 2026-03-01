@@ -5,7 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="13ba1884-45ef-4772-8059-81533df1f1a7" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.TwoPiece/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.TwoPiece/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Assets/Art/Stylized Pirate Asset Set/Scenes/MiniDemo/MiniDemo.unity" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Art/Stylized Pirate Asset Set/Scenes/MiniDemo/MiniDemo.unity" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Prefabs/PlayerShip.prefab" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Prefabs/PlayerShip.prefab" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Scripts/CannonsController.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/CannonsController.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Scripts/PlayerShipInput.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/PlayerShipInput.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Assets/Scripts/ShipCamera.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/ShipCamera.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -112,6 +116,7 @@
       <workItem from="1769635872388" duration="894000" />
       <workItem from="1769946422163" duration="13271000" />
       <workItem from="1770744075020" duration="445000" />
+      <workItem from="1771067366602" duration="4643000" />
     </task>
     <servers />
   </component>
