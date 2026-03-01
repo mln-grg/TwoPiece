@@ -51,11 +51,15 @@ public class DockingStation : MonoBehaviour
     MonoBehaviour   floatingBoat;   // FloatingBoat — fetched by name to avoid hard dependency
 
     // ---- state machine ----
-    enum DockState { Sailing, NearDock, Docking, Docked }
+    enum DockState { Sailing, NearDock, Docked }
     DockState state = DockState.Sailing;
 
-    float holdTimer;
-    float undockCooldown;   // prevents E-press on undock from immediately re-triggering dock
+    float      holdTimer;
+    float      undockCooldown;      // prevents E-press on undock from immediately re-triggering dock
+    bool       holdActive;          // true while player is actively holding E toward this dock
+    Vector3    dockStartPosition;   // ship position when hold began
+    Quaternion dockStartRotation;   // ship rotation when hold began (with lean)
+    Quaternion dockedRotation;      // yaw-only rotation locked in when hold begins
 
     // ---- cached GUI resources (built once) ----
     GUIStyle  promptStyle;
@@ -86,11 +90,10 @@ public class DockingStation : MonoBehaviour
                 UpdateProximity();
                 break;
 
-            case DockState.Docking:
-                PerformDocking();
-                break;
-
             case DockState.Docked:
+                // Pin ship to dock point every frame so moving it in the editor
+                // during runtime immediately previews the new position.
+                playerTransform.position = dockPoint.position;
                 if (Input.GetKeyDown(KeyCode.E))
                     Undock();
                 break;
@@ -107,9 +110,10 @@ public class DockingStation : MonoBehaviour
 
         if (dist > detectionRange)
         {
-            state        = DockState.Sailing;
-            holdTimer    = 0f;
+            state          = DockState.Sailing;
+            holdTimer      = 0f;
             undockCooldown = 0f;
+            if (holdActive) CancelHold();
             return;
         }
 
@@ -119,12 +123,23 @@ public class DockingStation : MonoBehaviour
 
         if (Input.GetKey(KeyCode.E) && undockCooldown <= 0f)
         {
+            // First frame of holding — lock in start state and disable ship controls
+            if (!holdActive)
+                StartHold();
+
             holdTimer += Time.deltaTime;
+
+            // Lerp ship from where it was when the hold started toward the dock point
+            float t = holdDuration > 0f ? Mathf.Clamp01(holdTimer / holdDuration) : 1f;
+            playerTransform.position = Vector3.Lerp(dockStartPosition, dockPoint.position, t);
+            playerTransform.rotation = Quaternion.Lerp(dockStartRotation, dockedRotation, t);
+
             if (holdTimer >= holdDuration)
-                BeginDocking();
+                CompleteDocking();
         }
         else
         {
+            if (holdActive) CancelHold();
             holdTimer = 0f;
         }
     }
@@ -133,49 +148,49 @@ public class DockingStation : MonoBehaviour
     // DOCKING
     // =============================================================
 
-    void BeginDocking()
+    void StartHold()
     {
-        state     = DockState.Docking;
-        holdTimer = 0f;
+        holdActive = true;
 
-        // Neutralise ship state before disabling its Update
+        // Snapshot where the ship is and what heading it has right now
+        dockStartPosition = playerTransform.position;
+        dockStartRotation = playerTransform.rotation;
+
+        // Yaw-only target rotation so the ship levels out lean/pitch as it slides in
+        dockedRotation = Quaternion.Euler(0f, playerTransform.eulerAngles.y, 0f);
+
+        // Neutralise ship so it doesn't fight the lerp
         if (shipController)
         {
             shipController.steeringInput = 0f;
             shipController.currentSail   = SailState.NoSail;
         }
 
-        // Disable player-controlled components so they don't fight us
-        if (playerInput)  playerInput.enabled  = false;
-        if (shipController) shipController.enabled = false;
-        if (floatingBoat)   floatingBoat.enabled   = false;
+        if (playerInput)    playerInput.enabled    = false;
+        if (shipController) shipController.enabled  = false;
+        if (floatingBoat)   floatingBoat.enabled    = false;
     }
 
-    void PerformDocking()
+    void CancelHold()
     {
-        // Smoothly slide the ship toward the dock point
-        playerTransform.position = Vector3.MoveTowards(
-            playerTransform.position,
-            dockPoint.position,
-            moveSpeed * Time.deltaTime
-        );
+        holdActive = false;
 
-        // Smoothly rotate to match the dock orientation
-        playerTransform.rotation = Quaternion.RotateTowards(
-            playerTransform.rotation,
-            dockPoint.rotation,
-            rotateSpeed * Time.deltaTime
-        );
+        if (playerInput)    playerInput.enabled    = true;
+        if (shipController) shipController.enabled  = true;
+        if (floatingBoat)   floatingBoat.enabled    = true;
+    }
 
-        // Snap when close enough
-        if (Vector3.Distance(playerTransform.position, dockPoint.position) <= snapDistance)
-        {
-            playerTransform.SetPositionAndRotation(dockPoint.position, dockPoint.rotation);
-            state = DockState.Docked;
+    void CompleteDocking()
+    {
+        holdActive = false;
+        holdTimer  = 0f;
+        state      = DockState.Docked;
 
-            if (shipCamera && dockedCameraPoint)
-                shipCamera.EnterDockedView(dockedCameraPoint);
-        }
+        // Hard-snap to exact dock position (lerp should be at t=1 already)
+        playerTransform.SetPositionAndRotation(dockPoint.position, dockedRotation);
+
+        if (shipCamera && dockedCameraPoint)
+            shipCamera.EnterDockedView(dockedCameraPoint);
     }
 
     // =============================================================
@@ -186,6 +201,8 @@ public class DockingStation : MonoBehaviour
     {
         state          = DockState.Sailing;
         undockCooldown = 0.4f;  // block dock input briefly so the same keypress doesn't re-trigger
+        holdActive     = false;
+        holdTimer      = 0f;
 
         if (shipCamera) shipCamera.ExitDockedView();
 
