@@ -114,16 +114,18 @@ public class PlayerShipInput : MonoBehaviour
         aimPitch += yInput * cameraSensitivity * 0.5f;
         aimPitch = Mathf.Clamp(aimPitch, minAimAngle, maxAimAngle);
 
-        Transform cannonOrigin = currentSide == ShipCamera.AimSide.Left
-            ? cannons.leftCannonOrigin
-            : cannons.rightCannonOrigin;
+        // Get cannon origin based on current side
+        Transform cannonOrigin = GetCannonOrigin(currentSide);
 
         if (!cannonOrigin)
         {
-            Debug.LogWarning("Cannon origin not set!");
+            Debug.LogWarning($"Cannon origin not set for {currentSide}!");
             return;
         }
 
+        // Get direction based on side
+        Vector3 sideDir = GetSideDirection(currentSide);
+        
         // Use aimPitch directly as the cannon launch angle.
         // Compute where the cannonball would land so the ballistic
         // solver (SolveToPoint) arrives back at the same angle.
@@ -142,9 +144,6 @@ public class PlayerShipInput : MonoBehaviour
         float horizontalDist = vx * t;
 
         // Flatten side direction to horizontal
-        Vector3 sideDir = currentSide == ShipCamera.AimSide.Left
-            ? -transform.right
-            : transform.right;
         Vector3 flatSide = new Vector3(sideDir.x, 0f, sideDir.z).normalized;
 
         currentAimPoint = cannonOrigin.position + flatSide * horizontalDist;
@@ -165,6 +164,12 @@ public class PlayerShipInput : MonoBehaviour
             case ShipCamera.AimSide.Right:
                 cannons.PreviewRightToPoint(currentAimPoint);
                 break;
+            case ShipCamera.AimSide.Front:
+                cannons.PreviewFrontToPoint(currentAimPoint);
+                break;
+            case ShipCamera.AimSide.Back:
+                cannons.PreviewBackToPoint(currentAimPoint);
+                break;
         }
     }
 
@@ -182,6 +187,46 @@ public class PlayerShipInput : MonoBehaviour
             case ShipCamera.AimSide.Right:
                 cannons.FireRightBroadsideAtPoint(currentAimPoint);
                 break;
+            case ShipCamera.AimSide.Front:
+                cannons.FireFrontAtPoint(currentAimPoint);
+                break;
+            case ShipCamera.AimSide.Back:
+                cannons.FireBackAtPoint(currentAimPoint);
+                break;
+        }
+    }
+
+    Transform GetCannonOrigin(ShipCamera.AimSide side)
+    {
+        switch (side)
+        {
+            case ShipCamera.AimSide.Left:
+                return cannons.leftCannonOrigin;
+            case ShipCamera.AimSide.Right:
+                return cannons.rightCannonOrigin;
+            case ShipCamera.AimSide.Front:
+                return cannons.frontCannonOrigin;
+            case ShipCamera.AimSide.Back:
+                return cannons.backCannonOrigin;
+            default:
+                return null;
+        }
+    }
+
+    Vector3 GetSideDirection(ShipCamera.AimSide side)
+    {
+        switch (side)
+        {
+            case ShipCamera.AimSide.Left:
+                return -transform.right;
+            case ShipCamera.AimSide.Right:
+                return transform.right;
+            case ShipCamera.AimSide.Front:
+                return transform.forward;
+            case ShipCamera.AimSide.Back:
+                return -transform.forward;
+            default:
+                return transform.forward;
         }
     }
 
@@ -193,9 +238,7 @@ public class PlayerShipInput : MonoBehaviour
         ShipCamera.AimSide currentSide = shipCamera.CurrentAimSide;
         if (currentSide == ShipCamera.AimSide.None) return;
 
-        Transform cannonOrigin = currentSide == ShipCamera.AimSide.Left 
-            ? cannons.leftCannonOrigin 
-            : cannons.rightCannonOrigin;
+        Transform cannonOrigin = GetCannonOrigin(currentSide);
 
         if (!cannonOrigin) return;
 

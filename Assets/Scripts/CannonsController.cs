@@ -46,10 +46,14 @@ public class CannonsController : MonoBehaviour
     [Header("Cannons")]
     public List<Cannon> leftCannons = new();
     public List<Cannon> rightCannons = new();
+    public List<Cannon> frontCannons = new();
+    public List<Cannon> backCannons = new();
 
     [Header("Fallback Origins")]
     public Transform leftCannonOrigin;
     public Transform rightCannonOrigin;
+    public Transform frontCannonOrigin;
+    public Transform backCannonOrigin;
 
     [Header("References")]
     public GameObject cannonballPrefab;
@@ -65,8 +69,13 @@ public class CannonsController : MonoBehaviour
 
     Vector3 leftAimPoint;
     Vector3 rightAimPoint;
+    Vector3 frontAimPoint;
+    Vector3 backAimPoint;
+    
     bool hasLeftAimPoint;
     bool hasRightAimPoint;
+    bool hasFrontAimPoint;
+    bool hasBackAimPoint;
 
     float lastFireTime;
     public float minFireInterval = 0.5f; // Prevent spam
@@ -102,8 +111,36 @@ public class CannonsController : MonoBehaviour
 
         ShowPreview(sol);
     }
+    
+    public void PreviewFront(float apex)
+    {
+        if (!frontCannonOrigin) return;
+        
+        BallisticSolution sol = BuildSolution(
+            frontCannonOrigin.position,
+            frontCannonOrigin.forward,
+            defaultRange,
+            apex
+        );
 
-    // NEW: Preview to specific point
+        ShowPreview(sol);
+    }
+
+    public void PreviewBack(float apex)
+    {
+        if (!backCannonOrigin) return;
+        
+        BallisticSolution sol = BuildSolution(
+            backCannonOrigin.position,
+            backCannonOrigin.forward,
+            defaultRange,
+            apex
+        );
+
+        ShowPreview(sol);
+    }
+
+    // Preview to specific point - Left/Right (Broadsides)
     public void PreviewLeftToPoint(Vector3 targetPoint)
     {
         if (!leftCannonOrigin) return;
@@ -125,6 +162,29 @@ public class CannonsController : MonoBehaviour
         BallisticSolution sol = SolveToPoint(rightCannonOrigin.position, rightCannonOrigin.forward, targetPoint);
         ShowPreview(sol);
     }
+    
+    // Preview to specific point - Front/Back (Chain shot / Oil barrels)
+    public void PreviewFrontToPoint(Vector3 targetPoint)
+    {
+        if (!frontCannonOrigin) return;
+
+        frontAimPoint = targetPoint;
+        hasFrontAimPoint = true;
+
+        BallisticSolution sol = SolveToPoint(frontCannonOrigin.position, frontCannonOrigin.forward, targetPoint);
+        ShowPreview(sol);
+    }
+
+    public void PreviewBackToPoint(Vector3 targetPoint)
+    {
+        if (!backCannonOrigin) return;
+
+        backAimPoint = targetPoint;
+        hasBackAimPoint = true;
+
+        BallisticSolution sol = SolveToPoint(backCannonOrigin.position, backCannonOrigin.forward, targetPoint);
+        ShowPreview(sol);
+    }
 
     void ShowPreview(BallisticSolution sol)
     {
@@ -141,6 +201,8 @@ public class CannonsController : MonoBehaviour
 
         hasLeftAimPoint = false;
         hasRightAimPoint = false;
+        hasFrontAimPoint = false;
+        hasBackAimPoint = false;
     }
 
     // =====================================================
@@ -164,8 +226,26 @@ public class CannonsController : MonoBehaviour
         float apex = GetDefaultApex();
         StartCoroutine(FireByRows(rightCannons, rightCannonOrigin, null, apex));
     }
+    
+    public void FireFront()
+    {
+        if (Time.time - lastFireTime < minFireInterval) return;
+        lastFireTime = Time.time;
 
-    // NEW: Fire at specific point
+        float apex = GetDefaultApex();
+        StartCoroutine(FireByRows(frontCannons, frontCannonOrigin, null, apex));
+    }
+
+    public void FireBack()
+    {
+        if (Time.time - lastFireTime < minFireInterval) return;
+        lastFireTime = Time.time;
+
+        float apex = GetDefaultApex();
+        StartCoroutine(FireByRows(backCannons, backCannonOrigin, null, apex));
+    }
+
+    // Fire at specific point - Broadsides
     public void FireLeftBroadsideAtPoint(Vector3 targetPoint)
     {
         if (Time.time - lastFireTime < minFireInterval) return;
@@ -180,6 +260,23 @@ public class CannonsController : MonoBehaviour
         lastFireTime = Time.time;
 
         StartCoroutine(FireByRows(rightCannons, rightCannonOrigin, targetPoint, 0f));
+    }
+    
+    // Fire at specific point - Front/Back
+    public void FireFrontAtPoint(Vector3 targetPoint)
+    {
+        if (Time.time - lastFireTime < minFireInterval) return;
+        lastFireTime = Time.time;
+
+        StartCoroutine(FireByRows(frontCannons, frontCannonOrigin, targetPoint, 0f));
+    }
+
+    public void FireBackAtPoint(Vector3 targetPoint)
+    {
+        if (Time.time - lastFireTime < minFireInterval) return;
+        lastFireTime = Time.time;
+
+        StartCoroutine(FireByRows(backCannons, backCannonOrigin, targetPoint, 0f));
     }
 
     // =====================================================
