@@ -67,14 +67,21 @@ public class ShipCamera : MonoBehaviour
     [Tooltip("Angle threshold to determine which side (used for left/right, front/back)")]
     public float sideThreshold = 15f;
 
+    [Header("Docked View")]
+    [Tooltip("How smoothly the camera moves to and from the dock camera point")]
+    public float dockCameraSmoothing = 2f;
+
     public enum AimSide { None, Left, Right, Front, Back }
-    
+
     Camera cam;
     Vector3 currentVelocity;
     Vector2 cameraRotation;
     float currentRoll;
     AimSide currentAimSide = AimSide.None;
     AimSide targetAimSide = AimSide.None;
+
+    bool isDocked;
+    Transform dockedCameraTarget;
 
     // Public getters
     public AimSide CurrentAimSide => currentAimSide;
@@ -94,10 +101,47 @@ public class ShipCamera : MonoBehaviour
         if (!ship)
             return;
 
+        if (isDocked && dockedCameraTarget)
+        {
+            UpdateDockedCamera();
+            UpdateFieldOfView();
+            return;
+        }
+
         UpdateCameraRotation();
         DetermineSideFromCamera();
         UpdateCameraPosition();
         UpdateFieldOfView();
+    }
+
+    void UpdateDockedCamera()
+    {
+        transform.position = Vector3.SmoothDamp(
+            transform.position,
+            dockedCameraTarget.position,
+            ref currentVelocity,
+            1f / dockCameraSmoothing
+        );
+
+        transform.rotation = Quaternion.Slerp(
+            transform.rotation,
+            dockedCameraTarget.rotation,
+            dockCameraSmoothing * Time.deltaTime
+        );
+    }
+
+    public void EnterDockedView(Transform cameraTarget)
+    {
+        isDocked = true;
+        dockedCameraTarget = cameraTarget;
+        currentVelocity = Vector3.zero;
+    }
+
+    public void ExitDockedView()
+    {
+        isDocked = false;
+        dockedCameraTarget = null;
+        currentVelocity = Vector3.zero;
     }
 
     void UpdateCameraRotation()
