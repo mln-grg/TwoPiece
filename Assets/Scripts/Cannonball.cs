@@ -34,7 +34,7 @@ public class Cannonball : MonoBehaviour
         flightTime = 0f;
         analyticFlight = true;
 
-        rb.isKinematic = true;
+        rb.isKinematic = false;
         rb.useGravity = false;
     }
 
