@@ -18,7 +18,7 @@ public class HealthComponent : MonoBehaviour,IDamageable
     public float maxHealth = 100f;
     public float currentHealth;
 
-    public event Action<float> OnDamaged;
+    public event Action<DamageInfo> OnDamaged;
     public event Action OnDestroyed;
 
     void Awake()
@@ -31,7 +31,7 @@ public class HealthComponent : MonoBehaviour,IDamageable
         currentHealth -= damage.amount;
         currentHealth = Mathf.Max(0f, currentHealth);
 
-        OnDamaged?.Invoke(damage.amount);
+        OnDamaged?.Invoke(damage);
 
         if (currentHealth <= 0f)
             OnDestroyed?.Invoke();
