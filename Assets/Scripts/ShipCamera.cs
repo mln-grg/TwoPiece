@@ -313,44 +313,51 @@ public class ShipCamera : MonoBehaviour
 
     void DetermineSideFromCamera()
     {
-        // Determine which side the camera is looking at based on horizontal rotation
-        if (isAiming)
-        {
-            // Normalize angle to -180 to 180 range
-            float normalizedAngle = cameraRotation.y;
-            while (normalizedAngle > 180f) normalizedAngle -= 360f;
-            while (normalizedAngle < -180f) normalizedAngle += 360f;
-            
-            // Front: -sideThreshold to +sideThreshold
-            // Right: sideThreshold to (90 - sideThreshold)
-            // Back: (90 + sideThreshold) to (180) and (-180) to (-90 - sideThreshold)
-            // Left: (-90 + sideThreshold) to -sideThreshold
-            
-            if (normalizedAngle >= -sideThreshold && normalizedAngle <= sideThreshold)
-            {
-                currentAimSide = AimSide.Front;
-            }
-            else if (normalizedAngle > sideThreshold && normalizedAngle < 90f - sideThreshold)
-            {
-                currentAimSide = AimSide.Right;
-            }
-            else if (normalizedAngle < -sideThreshold && normalizedAngle > -90f + sideThreshold)
-            {
-                currentAimSide = AimSide.Left;
-            }
-            else if (Mathf.Abs(normalizedAngle) > 90f + sideThreshold)
-            {
-                currentAimSide = AimSide.Back;
-            }
-            else
-            {
-                // In deadzone, keep current side
-                currentAimSide = targetAimSide;
-            }
-        }
-        else
+        if (!isAiming)
         {
             currentAimSide = AimSide.None;
+            return;
+        }
+
+        float a = cameraRotation.y;
+        while (a >  180f) a -= 360f;
+        while (a < -180f) a += 360f;
+
+        // True hysteresis: boundaries sit at the 45°/135° midpoints between sides.
+        // To enter a new side you must cross (midpoint + H); to leave you must come
+        // back past (midpoint - H).  This makes rapid snapping impossible.
+        float H    = sideThreshold;
+        AimSide next = currentAimSide;
+
+        switch (currentAimSide)
+        {
+            case AimSide.None:  // treated as Front for initial resolution
+            case AimSide.Front:
+                if      (a >  45f + H) next = AimSide.Right;
+                else if (a < -45f - H) next = AimSide.Left;
+                break;
+
+            case AimSide.Right:
+                if      (a <  45f - H)  next = AimSide.Front;
+                else if (a > 135f + H)  next = AimSide.Back;
+                break;
+
+            case AimSide.Back:
+                // Back spans both sides of ±180° so check sign to pick correct neighbour
+                if      (a > 0f && a < 135f - H)  next = AimSide.Right;
+                else if (a < 0f && a > -135f + H)  next = AimSide.Left;
+                break;
+
+            case AimSide.Left:
+                if      (a > -45f + H)  next = AimSide.Front;
+                else if (a < -135f - H) next = AimSide.Back;
+                break;
+        }
+
+        if (next != currentAimSide)
+        {
+            currentAimSide = next;
+            targetAimSide  = next;
         }
     }
 
