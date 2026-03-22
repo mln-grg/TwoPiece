@@ -3602,8 +3602,14 @@ MonoBehaviour:
   aimSnapSpeed: 10
   dynamicCamera: 1
   speedOffsetMultiplier: 0.5
-  sideThreshold: 15
+  sideThreshold: 30
   dockCameraSmoothing: 2
+  previewTravelMode: 0
+  travelOffset: {x: 0, y: 48.6, z: -39.9}
+  travelFOV: 69.3
+  travelPitch: -45.8
+  travelYaw: 0
+  travelTransitionTime: 0.5
 --- !u!114 &574902960 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1380911837201745725, guid: 3deec4879cac8d34e9be24d26909b121, type: 3}
@@ -14034,7 +14040,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4950631506313595977, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.036479153
+      value: 0.01422981
       objectReference: {fileID: 0}
     - target: {fileID: 4950631506313595977, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
       propertyPath: m_LocalPosition.z
@@ -14042,19 +14048,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4950631506313595977, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
       propertyPath: m_LocalRotation.w
-      value: -0.69305146
+      value: -0.6930444
       objectReference: {fileID: 0}
     - target: {fileID: 4950631506313595977, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0.004590772
+      value: 0.0014169358
       objectReference: {fileID: 0}
     - target: {fileID: 4950631506313595977, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.720857
+      value: -0.72086996
       objectReference: {fileID: 0}
     - target: {fileID: 4950631506313595977, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.0048697144
+      value: 0.0058302707
       objectReference: {fileID: 0}
     - target: {fileID: 4950631506313595977, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -14193,6 +14199,18 @@ PrefabInstance:
       value: 8
       objectReference: {fileID: 0}
     - target: {fileID: 8242190862056452458, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
+      propertyPath: gear1Speed
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8242190862056452458, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
+      propertyPath: gear2Speed
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 8242190862056452458, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
+      propertyPath: gear3Speed
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 8242190862056452458, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
       propertyPath: hullHealth
       value: 
       objectReference: {fileID: 31925893}
@@ -14210,7 +14228,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8242190862056452458, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
       propertyPath: acceleration
-      value: 0.5
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 8242190862056452458, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
       propertyPath: deceleration
@@ -14230,11 +14248,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8242190862056452458, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
       propertyPath: lowSpeedTurnRate
-      value: 20
+      value: 18
       objectReference: {fileID: 0}
     - target: {fileID: 8242190862056452458, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
       propertyPath: highSpeedTurnRate
-      value: 7
+      value: 12
+      objectReference: {fileID: 0}
+    - target: {fileID: 8242190862056452458, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
+      propertyPath: gearDownDeceleration
+      value: 2.5
       objectReference: {fileID: 0}
     - target: {fileID: 8423095137281784711, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
       propertyPath: m_Name
@@ -14968,6 +14990,18 @@ PrefabInstance:
       value: 0.08
       objectReference: {fileID: 0}
     - target: {fileID: 2873097430092653796, guid: 3deec4879cac8d34e9be24d26909b121, type: 3}
+      propertyPath: gear1Speed
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 2873097430092653796, guid: 3deec4879cac8d34e9be24d26909b121, type: 3}
+      propertyPath: gear2Speed
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 2873097430092653796, guid: 3deec4879cac8d34e9be24d26909b121, type: 3}
+      propertyPath: gear3Speed
+      value: 12
+      objectReference: {fileID: 0}
+    - target: {fileID: 2873097430092653796, guid: 3deec4879cac8d34e9be24d26909b121, type: 3}
       propertyPath: hullHealth
       value: 
       objectReference: {fileID: 1828297340}
@@ -14989,7 +15023,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5421111104640554973, guid: 3deec4879cac8d34e9be24d26909b121, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -0.017787656
+      value: 0.014095328
       objectReference: {fileID: 0}
     - target: {fileID: 5421111104640554973, guid: 3deec4879cac8d34e9be24d26909b121, type: 3}
       propertyPath: m_LocalPosition.z
@@ -14997,19 +15031,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5421111104640554973, guid: 3deec4879cac8d34e9be24d26909b121, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.6910794
+      value: -0.69107014
       objectReference: {fileID: 0}
     - target: {fileID: 5421111104640554973, guid: 3deec4879cac8d34e9be24d26909b121, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0.0053712106
+      value: 0.004099081
       objectReference: {fileID: 0}
     - target: {fileID: 5421111104640554973, guid: 3deec4879cac8d34e9be24d26909b121, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.7227414
+      value: -0.72275037
       objectReference: {fileID: 0}
     - target: {fileID: 5421111104640554973, guid: 3deec4879cac8d34e9be24d26909b121, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.005035631
+      value: 0.006104537
       objectReference: {fileID: 0}
     - target: {fileID: 5421111104640554973, guid: 3deec4879cac8d34e9be24d26909b121, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x

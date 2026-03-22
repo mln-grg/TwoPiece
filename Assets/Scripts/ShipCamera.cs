@@ -71,6 +71,25 @@ public class ShipCamera : MonoBehaviour
     [Tooltip("How smoothly the camera moves to and from the dock camera point")]
     public float dockCameraSmoothing = 2f;
 
+    [Header("Travel Mode (Gear 3)")]
+    [Tooltip("Enable to preview the travel camera in Play mode without being at Gear 3")]
+    public bool previewTravelMode = false;
+
+    [Tooltip("Camera position offset when at full gear — high and behind for overhead view")]
+    public Vector3 travelOffset = new Vector3(0f, 28f, -18f);
+
+    [Tooltip("Field of view during travel mode")]
+    public float travelFOV = 52f;
+
+    [Tooltip("Downward pitch angle the camera locks to during travel")]
+    public float travelPitch = 55f;
+
+    [Tooltip("Horizontal yaw offset relative to ship forward (0 = straight behind)")]
+    public float travelYaw = 0f;
+
+    [Tooltip("Seconds to complete the transition into travel mode (SmoothDamp smoothTime — higher = slower)")]
+    public float travelTransitionTime = 1.0f;
+
     public enum AimSide { None, Left, Right, Front, Back }
 
     Camera cam;
@@ -82,6 +101,21 @@ public class ShipCamera : MonoBehaviour
 
     bool isDocked;
     Transform dockedCameraTarget;
+
+    bool isTraveling;
+    bool isTransitioningToTravel;
+    bool isTransitioningFromTravel;
+    bool wasInTravelMode;
+    float transitionTimer;
+
+    // SmoothDamp velocity state for rotation
+    float travelPitchVelocity;
+    float travelYawVelocity;
+    float aimPitchVelocity;
+    float aimYawVelocity;
+    float rollVelocity;
+
+    bool IsInTravelMode => isTraveling || previewTravelMode;
 
     // Public getters
     public AimSide CurrentAimSide => currentAimSide;
@@ -100,6 +134,35 @@ public class ShipCamera : MonoBehaviour
     {
         if (!ship)
             return;
+
+        // Detect travel mode edge (handles both EnterTravelMode() and previewTravelMode toggle)
+        bool nowTraveling = IsInTravelMode;
+        if (nowTraveling && !wasInTravelMode)
+        {
+            isTransitioningToTravel   = true;
+            isTransitioningFromTravel = false;
+            transitionTimer           = travelTransitionTime;
+            travelPitchVelocity       = 0f;
+            travelYawVelocity         = 0f;
+        }
+        else if (!nowTraveling && wasInTravelMode)
+        {
+            isTransitioningToTravel   = false;
+            isTransitioningFromTravel = true;
+            transitionTimer           = travelTransitionTime;
+        }
+        wasInTravelMode = nowTraveling;
+
+        // Count down and unlock when timer expires
+        if (isTransitioningToTravel || isTransitioningFromTravel)
+        {
+            transitionTimer -= Time.deltaTime;
+            if (transitionTimer <= 0f)
+            {
+                isTransitioningToTravel   = false;
+                isTransitioningFromTravel = false;
+            }
+        }
 
         if (isDocked && dockedCameraTarget)
         {
@@ -144,36 +207,79 @@ public class ShipCamera : MonoBehaviour
         currentVelocity = Vector3.zero;
     }
 
+    public void EnterTravelMode()
+    {
+        isTraveling = true;
+    }
+
+    public void ExitTravelMode()
+    {
+        isTraveling = false;
+        // Reset pitch so player doesn't snap back from a steep angle
+        cameraRotation.x = 0f;
+    }
+
     void UpdateCameraRotation()
     {
         // Only allow free camera control when NOT aiming
         if (!isAiming)
         {
-            float mouseX = Input.GetAxis("Mouse X") * lookSensitivity;
-            float mouseY = Input.GetAxis("Mouse Y") * lookSensitivity;
-
-            if (invertY)
-                mouseY = -mouseY;
-
-            cameraRotation.x += mouseY;
-            cameraRotation.y += mouseX;
-
-            // Clamp vertical rotation
-            cameraRotation.x = Mathf.Clamp(cameraRotation.x, minVerticalAngle, maxVerticalAngle);
-            
-            // Horizontal rotation handling
-            if (allow360Rotation)
+            if (IsInTravelMode)
             {
-                // Wrap around 360 degrees
-                if (cameraRotation.y > 180f)
-                    cameraRotation.y -= 360f;
-                else if (cameraRotation.y < -180f)
-                    cameraRotation.y += 360f;
+                if (isTransitioningToTravel)
+                {
+                    cameraRotation.x = Mathf.SmoothDampAngle(cameraRotation.x, travelPitch, ref travelPitchVelocity, travelTransitionTime);
+                    cameraRotation.y = Mathf.SmoothDampAngle(cameraRotation.y, travelYaw,   ref travelYawVelocity,   travelTransitionTime);
+                    // Completion is timer-driven from LateUpdate — no manual check needed
+                }
+                else
+                {
+                    // Transition complete — full free-look while keeping the travel position
+                    float mouseX = Input.GetAxis("Mouse X") * lookSensitivity;
+                    float mouseY = Input.GetAxis("Mouse Y") * lookSensitivity;
+                    if (invertY) mouseY = -mouseY;
+
+                    cameraRotation.x += mouseY;
+                    cameraRotation.y += mouseX;
+                    cameraRotation.x = Mathf.Clamp(cameraRotation.x, minVerticalAngle, maxVerticalAngle);
+
+                    if (allow360Rotation)
+                    {
+                        if (cameraRotation.y > 180f)  cameraRotation.y -= 360f;
+                        else if (cameraRotation.y < -180f) cameraRotation.y += 360f;
+                    }
+                    else
+                    {
+                        cameraRotation.y = Mathf.Clamp(cameraRotation.y, -maxHorizontalAngle, maxHorizontalAngle);
+                    }
+                }
             }
             else
             {
-                // Clamp to limited angle
-                cameraRotation.y = Mathf.Clamp(cameraRotation.y, -maxHorizontalAngle, maxHorizontalAngle);
+                float mouseX = Input.GetAxis("Mouse X") * lookSensitivity;
+                float mouseY = Input.GetAxis("Mouse Y") * lookSensitivity;
+
+                if (invertY)
+                    mouseY = -mouseY;
+
+                cameraRotation.x += mouseY;
+                cameraRotation.y += mouseX;
+
+                // Clamp vertical rotation
+                cameraRotation.x = Mathf.Clamp(cameraRotation.x, minVerticalAngle, maxVerticalAngle);
+
+                // Horizontal rotation handling
+                if (allow360Rotation)
+                {
+                    if (cameraRotation.y > 180f)
+                        cameraRotation.y -= 360f;
+                    else if (cameraRotation.y < -180f)
+                        cameraRotation.y += 360f;
+                }
+                else
+                {
+                    cameraRotation.y = Mathf.Clamp(cameraRotation.y, -maxHorizontalAngle, maxHorizontalAngle);
+                }
             }
         }
         else
@@ -182,8 +288,9 @@ public class ShipCamera : MonoBehaviour
             if (targetAimSide != AimSide.None)
             {
                 Vector3 aimRot = GetAimRotation(targetAimSide);
-                cameraRotation.y = Mathf.Lerp(cameraRotation.y, aimRot.y, aimSnapSpeed * Time.deltaTime);
-                cameraRotation.x = Mathf.Lerp(cameraRotation.x, aimRot.x, aimSnapSpeed * Time.deltaTime);
+                float aimSmoothTime = 1f / aimSnapSpeed;
+                cameraRotation.y = Mathf.SmoothDampAngle(cameraRotation.y, aimRot.y, ref aimYawVelocity,   aimSmoothTime);
+                cameraRotation.x = Mathf.SmoothDampAngle(cameraRotation.x, aimRot.x, ref aimPitchVelocity, aimSmoothTime);
             }
         }
 
@@ -194,10 +301,9 @@ public class ShipCamera : MonoBehaviour
             Vector3 aimRot = GetAimRotation(targetAimSide);
             targetRoll = aimRot.z;
         }
-        currentRoll = Mathf.Lerp(currentRoll, targetRoll, aimSnapSpeed * Time.deltaTime);
+        currentRoll = Mathf.SmoothDampAngle(currentRoll, targetRoll, ref rollVelocity, 1f / aimSnapSpeed);
         Quaternion targetRotation = ship.rotation * Quaternion.Euler(-cameraRotation.x, cameraRotation.y, currentRoll);
 
-        // Smooth rotation
         transform.rotation = Quaternion.Slerp(
             transform.rotation,
             targetRotation,
@@ -257,10 +363,14 @@ public class ShipCamera : MonoBehaviour
             // Use side-specific offset when aiming
             targetOffset = GetAimOffset(currentAimSide);
         }
+        else if (IsInTravelMode)
+        {
+            targetOffset = travelOffset;
+        }
         else
         {
             targetOffset = normalOffset;
-            
+
             // Add dynamic offset based on ship speed when not aiming
             if (dynamicCamera)
             {
@@ -276,14 +386,16 @@ public class ShipCamera : MonoBehaviour
         // Calculate target position in world space
         Vector3 targetPos = ship.TransformPoint(targetOffset);
 
-        // Smooth follow (faster when aiming)
-        float smoothing = isAiming ? positionSmoothing * 1.5f : positionSmoothing;
-        
+        // Travel enter and exit both use travelTransitionTime so the move in and out feel the same
+        float smoothTime = (isTransitioningToTravel || isTransitioningFromTravel) ? travelTransitionTime
+                         : isAiming                                               ? 1f / (positionSmoothing * 1.5f)
+                                                                                  : 1f / positionSmoothing;
+
         transform.position = Vector3.SmoothDamp(
             transform.position,
             targetPos,
             ref currentVelocity,
-            1f / smoothing
+            smoothTime
         );
     }
 
@@ -291,7 +403,7 @@ public class ShipCamera : MonoBehaviour
     {
         if (!cam) return;
 
-        float targetFOV = isAiming ? aimFOV : normalFOV;
+        float targetFOV = isAiming ? aimFOV : IsInTravelMode ? travelFOV : normalFOV;
         cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, targetFOV, fovSpeed * Time.deltaTime);
     }
 

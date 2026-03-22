@@ -202,7 +202,7 @@ public class CombatState : AIState
                 // If target is mostly behind us (>120°) use half sail so the
                 // turning radius stays tight — full sail here just drives us away.
                 bool targetBehind = Mathf.Abs(signedAngle) > 120f;
-                SetSail(brain, targetBehind ? SailState.HalfSail : SailState.FullSail);
+                SetSail(brain, targetBehind ? GearState.Gear2 : GearState.Gear3);
 
                 // Steer directly toward target
                 brain.Ship.steeringInput = Mathf.Clamp(
@@ -211,9 +211,9 @@ public class CombatState : AIState
 
             case Mode.Broadside:
                 // Distance management: close in, hold, or drift back
-                if      (distance > DesiredCombatDistance + DistanceTolerance) SetSail(brain, SailState.FullSail);
-                else if (distance < DesiredCombatDistance - DistanceTolerance) SetSail(brain, SailState.NoSail);
-                else                                                            SetSail(brain, SailState.HalfSail);
+                if      (distance > DesiredCombatDistance + DistanceTolerance) SetSail(brain, GearState.Gear3);
+                else if (distance < DesiredCombatDistance - DistanceTolerance) SetSail(brain, GearState.Idle);
+                else                                                            SetSail(brain, GearState.Gear2);
 
                 // Angle maintenance: nudge steering to keep target at DesiredAngle.
                 // DeltaAngle handles the ±180° wrap so we always take the shortest arc.
@@ -226,9 +226,9 @@ public class CombatState : AIState
 
             case Mode.Reposition:
                 // Always keep half sail so the ship retains steerage way.
-                // NoSail when target is behind caused the ship to stop dead and
+                // Idle when target is behind caused the ship to stop dead and
                 // spin in place because it had no forward momentum to steer with.
-                SetSail(brain, SailState.HalfSail);
+                SetSail(brain, GearState.Gear2);
 
                 // DeltaAngle(actual→desired) gives the shortest signed rotation needed.
                 //   > 0 → rotate counterclockwise (left)  → steeringInput = -1
@@ -241,9 +241,9 @@ public class CombatState : AIState
         }
     }
 
-    void SetSail(AIBrain brain, SailState target)
+    void SetSail(AIBrain brain, GearState target)
     {
-        SailState current = brain.Ship.currentSail;
+        GearState current = brain.Ship.currentGear;
         if (current == target) return;
         brain.Ship.sailDelta = current < target ? 1 : -1;
     }

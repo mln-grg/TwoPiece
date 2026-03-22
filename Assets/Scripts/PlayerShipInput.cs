@@ -28,6 +28,8 @@ public class PlayerShipInput : MonoBehaviour
     float aimPitch;
     bool wasAiming;
 
+    GearState prevGear;
+
     void Awake()
     {
         ship = GetComponent<ShipController>();
@@ -54,13 +56,25 @@ public class PlayerShipInput : MonoBehaviour
         // Steering
         ship.steeringInput = Input.GetAxis("Horizontal");
 
-        // Sail control
+        // Gear control
         if (Input.GetKeyDown(KeyCode.W)) ship.sailDelta = +1;
         if (Input.GetKeyDown(KeyCode.S)) ship.sailDelta = -1;
 
         // Dash
         if (Input.GetKeyDown(KeyCode.Space))
             ship.TryDash();
+
+        // Trigger travel camera when reaching or leaving Gear 3
+        GearState currentGear = ship.currentGear;
+        if (currentGear != prevGear)
+        {
+            if (currentGear == GearState.Gear3)
+                shipCamera.EnterTravelMode();
+            else if (prevGear == GearState.Gear3)
+                shipCamera.ExitTravelMode();
+
+            prevGear = currentGear;
+        }
     }
 
     void HandleAimingAndFiring()
