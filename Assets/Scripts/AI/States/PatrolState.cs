@@ -13,7 +13,7 @@ using UnityEngine;
 ///     initial destination (set <see cref="AIBrain.useInitialDestination"/>).
 ///   • After that it picks random waypoints inside the patrol radius anchored
 ///     to the ship's spawn position.
-///   • The ship maintains HalfSail speed while patrolling.
+///   • The ship maintains Gear2 speed while patrolling.
 /// </summary>
 public class PatrolState : AIState
 {
@@ -137,13 +137,13 @@ public class PatrolState : AIState
     }
 
     /// <summary>
-    /// Steps sailDelta toward HalfSail. sailDelta is consumed by ShipController
+    /// Steps sailDelta toward Gear2. sailDelta is consumed by ShipController
     /// each frame (one step per call), so we keep nudging until we're there.
     /// </summary>
     void MaintainPatrolSpeed(AIBrain brain)
     {
-        SailState current = brain.Ship.currentSail;
-        SailState target  = SailState.HalfSail;
+        GearState current = brain.Ship.currentGear;
+        GearState target  = GearState.Gear2;
 
         if (current == target) return;
 

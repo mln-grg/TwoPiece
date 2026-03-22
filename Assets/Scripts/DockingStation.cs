@@ -163,7 +163,7 @@ public class DockingStation : MonoBehaviour
         if (shipController)
         {
             shipController.steeringInput = 0f;
-            shipController.currentSail   = SailState.NoSail;
+            shipController.currentGear   = GearState.Idle;
         }
 
         if (playerInput)    playerInput.enabled    = false;

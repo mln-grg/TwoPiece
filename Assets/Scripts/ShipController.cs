@@ -1,15 +1,17 @@
 using UnityEngine;
 
-public enum SailState { NoSail, HalfSail, FullSail }
+public enum GearState { Idle, Gear1, Gear2, Gear3 }
 
 public class ShipController : MonoBehaviour
 {
-    public float halfSailSpeed = 10f;
-    public float fullSailSpeed = 20f;
+    public float gear1Speed = 7f;
+    public float gear2Speed = 13f;
+    public float gear3Speed = 20f;
     
     public float acceleration = 4.0f;
-    
-    public float deceleration = 2.5f;
+
+    [Tooltip("Speed units/s lost per second when dropping a gear or going to idle — 25 drops full speed to zero in ~0.8s")]
+    public float gearDownDeceleration = 25f;
 
     [Header("Steering")]
     [Tooltip("Max turn rate at zero speed (easiest turning)")]
@@ -38,7 +40,7 @@ public class ShipController : MonoBehaviour
     float dashCooldownTimer;
 
     [Header("State")]
-    public SailState currentSail = SailState.NoSail;
+    public GearState currentGear = GearState.Idle;
 
     [Header("Control Input (AI / Player)")]
     [Range(-1f, 1f)] public float steeringInput;
@@ -62,7 +64,7 @@ public class ShipController : MonoBehaviour
     bool destroyed;
 
     public float CurrentSpeed => currentForwardSpeed;
-    public float MaxSpeed => fullSailSpeed;
+    public float MaxSpeed => gear3Speed;
 
     void Update()
     {
@@ -86,13 +88,15 @@ public class ShipController : MonoBehaviour
 
         if (sailDelta > 0)
         {
-            if (currentSail == SailState.NoSail) currentSail = SailState.HalfSail;
-            else if (currentSail == SailState.HalfSail) currentSail = SailState.FullSail;
+            if      (currentGear == GearState.Idle)  currentGear = GearState.Gear1;
+            else if (currentGear == GearState.Gear1) currentGear = GearState.Gear2;
+            else if (currentGear == GearState.Gear2) currentGear = GearState.Gear3;
         }
         else
         {
-            if (currentSail == SailState.FullSail) currentSail = SailState.HalfSail;
-            else if (currentSail == SailState.HalfSail) currentSail = SailState.NoSail;
+            if      (currentGear == GearState.Gear3) currentGear = GearState.Gear2;
+            else if (currentGear == GearState.Gear2) currentGear = GearState.Gear1;
+            else if (currentGear == GearState.Gear1) currentGear = GearState.Idle;
         }
 
         sailDelta = 0;
@@ -133,14 +137,14 @@ public class ShipController : MonoBehaviour
     {
         float targetSpeed =
             sailsDestroyed || hullDisabled ? 0f :
-            currentSail == SailState.FullSail ? fullSailSpeed :
-            currentSail == SailState.HalfSail ? halfSailSpeed :
+            currentGear == GearState.Gear3 ? gear3Speed :
+            currentGear == GearState.Gear2 ? gear2Speed :
+            currentGear == GearState.Gear1 ? gear1Speed :
             0f;
 
         if (!isDashing)
         {
-            // Smooth acceleration/deceleration with curves
-            float accel = targetSpeed > currentForwardSpeed ? acceleration : deceleration;
+            float accel = targetSpeed > currentForwardSpeed ? acceleration : gearDownDeceleration;
             currentForwardSpeed = Mathf.MoveTowards(currentForwardSpeed, targetSpeed, accel * Time.deltaTime);
         }
 
@@ -148,7 +152,7 @@ public class ShipController : MonoBehaviour
         transform.position += transform.forward * currentForwardSpeed * Time.deltaTime;
 
         // Speed-dependent max turn rate: slower = easier to turn, faster = harder
-        float speedRatio = Mathf.Clamp01(currentForwardSpeed / fullSailSpeed);
+        float speedRatio = Mathf.Clamp01(currentForwardSpeed / gear3Speed);
         float maxTurnRate = Mathf.Lerp(lowSpeedTurnRate, highSpeedTurnRate, speedRatio);
 
         // Target rotation speed from input — zero input bleeds rotation back to zero
@@ -167,7 +171,7 @@ public class ShipController : MonoBehaviour
         // Lean based on how much of max turn rate we're actually using
         float normalizedTurn = maxTurnRate > 0f ? currentRotationSpeed / maxTurnRate : 0f;
         float steeringIntensity = Mathf.Abs(normalizedTurn);
-        float speedFactor = Mathf.Clamp01(currentForwardSpeed / fullSailSpeed);
+        float speedFactor = Mathf.Clamp01(currentForwardSpeed / gear3Speed);
 
         // More lean at higher speeds when turning
         float targetLean = -normalizedTurn * (leanAmount + turnLeanBonus * steeringIntensity * speedFactor);
