@@ -79,7 +79,7 @@ public class Cannonball : MonoBehaviour
             {
                 amount = damage,
                 hitPoint = col.contacts[0].point,
-                source = gameObject
+                source = Owner != null ? Owner : gameObject
             });
         }
 

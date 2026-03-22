@@ -7,8 +7,10 @@
     <list default="true" id="13ba1884-45ef-4772-8059-81533df1f1a7" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/.idea.TwoPiece/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.TwoPiece/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Assets/Art/Stylized Pirate Asset Set/Scenes/MiniDemo/MiniDemo.unity" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Art/Stylized Pirate Asset Set/Scenes/MiniDemo/MiniDemo.unity" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Scripts/AIShipController.cs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Scripts/AIShipController.cs.meta" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/Assets/Scripts/Cannonball.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/Cannonball.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Assets/Scripts/ShipController.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/ShipController.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Assets/Scripts/HealthComponent.cs" beforeDir="false" afterPath="$PROJECT_DIR$/Assets/Scripts/HealthComponent.cs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -116,7 +118,7 @@
       <workItem from="1770744075020" duration="445000" />
       <workItem from="1771067366602" duration="4643000" />
       <workItem from="1772383944942" duration="555000" />
-      <workItem from="1774189074810" duration="1071000" />
+      <workItem from="1774189074810" duration="5257000" />
     </task>
     <servers />
   </component>
@@ -132,5 +134,24 @@
   <component name="UnityUnitTestConfiguration" currentTestLauncher="Both" />
   <component name="VcsManagerConfiguration">
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="DotNet Breakpoints">
+          <url>file://$PROJECT_DIR$/Assets/Scripts/Cannonball.cs</url>
+          <line>27</line>
+          <properties documentPath="C:\Projects\TwoPiece\Assets\Scripts\Cannonball.cs" containingFunctionPresentation="Method 'Start'">
+            <startOffsets>
+              <option value="503" />
+            </startOffsets>
+            <endOffsets>
+              <option value="533" />
+            </endOffsets>
+          </properties>
+          <option name="timeStamp" value="12" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>
