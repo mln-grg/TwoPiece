@@ -12,13 +12,14 @@ public class ShipController : MonoBehaviour
     public float deceleration = 2.5f;
 
     [Header("Steering")]
-    [Tooltip("Turn speed at low velocity")]
+    [Tooltip("Max turn rate at zero speed (easiest turning)")]
     public float lowSpeedTurnRate = 45f;
-    
-    [Tooltip("Turn speed at high velocity")]
-    public float highSpeedTurnRate = 28f;
-    
-    public float steeringResponsiveness = 8f;
+
+    [Tooltip("Max turn rate at full speed (hardest turning)")]
+    public float highSpeedTurnRate = 18f;
+
+    [Tooltip("How fast rotation speed builds up or bleeds off (deg/s²) — like the steering wheel tightening")]
+    public float turnAcceleration = 72f;
 
     [Header("Ship Lean (Heel)")]
     public float leanAmount = 12f;
@@ -53,8 +54,7 @@ public class ShipController : MonoBehaviour
     public float hullDisableThreshold = 30f;
     
     float currentForwardSpeed;
-    float currentTurnSpeed;
-    float smoothedSteeringInput;
+    float currentRotationSpeed;
     float currentLean;
 
     bool sailsDestroyed;
@@ -146,34 +146,31 @@ public class ShipController : MonoBehaviour
 
         // Forward motion
         transform.position += transform.forward * currentForwardSpeed * Time.deltaTime;
-        
-        // Smooth steering input for less twitchy feel
-        smoothedSteeringInput = Mathf.Lerp(
-            smoothedSteeringInput, 
-            steeringInput, 
-            steeringResponsiveness * Time.deltaTime
+
+        // Speed-dependent max turn rate: slower = easier to turn, faster = harder
+        float speedRatio = Mathf.Clamp01(currentForwardSpeed / fullSailSpeed);
+        float maxTurnRate = Mathf.Lerp(lowSpeedTurnRate, highSpeedTurnRate, speedRatio);
+
+        // Target rotation speed from input — zero input bleeds rotation back to zero
+        float targetRotationSpeed = steeringInput * maxTurnRate;
+
+        // Accelerate toward target; reversing direction forces current speed through zero first,
+        // naturally producing the "startup lag" and "longer in acceleration on reversal" feel
+        currentRotationSpeed = Mathf.MoveTowards(
+            currentRotationSpeed,
+            targetRotationSpeed,
+            turnAcceleration * Time.deltaTime
         );
 
-        // Speed-based turn rate (ships turn BETTER at moderate speed)
-        float speedRatio = currentForwardSpeed / fullSailSpeed;
-        
-        // Create a curve where mid-speed has best turning
-        // 0 speed = poor turning, mid speed = best, high speed = moderate
-        float turnCurve = Mathf.Sin(speedRatio * Mathf.PI) * 1.2f;
-        turnCurve = Mathf.Max(0.3f, turnCurve); // Minimum turn ability even when stopped
-        
-        float effectiveTurnRate = Mathf.Lerp(lowSpeedTurnRate, highSpeedTurnRate, speedRatio) * turnCurve;
+        transform.Rotate(0f, currentRotationSpeed * Time.deltaTime, 0f, Space.World);
 
-        // Apply turning
-        currentTurnSpeed = smoothedSteeringInput * effectiveTurnRate;
-        transform.Rotate(0f, currentTurnSpeed * Time.deltaTime, 0f, Space.World);
-        
-
-        float steeringIntensity = Mathf.Abs(smoothedSteeringInput);
+        // Lean based on how much of max turn rate we're actually using
+        float normalizedTurn = maxTurnRate > 0f ? currentRotationSpeed / maxTurnRate : 0f;
+        float steeringIntensity = Mathf.Abs(normalizedTurn);
         float speedFactor = Mathf.Clamp01(currentForwardSpeed / fullSailSpeed);
-        
+
         // More lean at higher speeds when turning
-        float targetLean = -smoothedSteeringInput * (leanAmount + turnLeanBonus * steeringIntensity * speedFactor);
+        float targetLean = -normalizedTurn * (leanAmount + turnLeanBonus * steeringIntensity * speedFactor);
 
         currentLean = Mathf.Lerp(currentLean, targetLean, leanSmoothing * Time.deltaTime);
         
