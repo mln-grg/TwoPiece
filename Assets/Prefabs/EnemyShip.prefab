@@ -1094,8 +1094,8 @@ GameObject:
   - component: {fileID: 5421111104640554973}
   - component: {fileID: 8231227268311468621}
   - component: {fileID: 7432609023691142593}
-  - component: {fileID: 2910736831283122266}
   - component: {fileID: 2873097430092653796}
+  - component: {fileID: 5387334552697610569}
   m_Layer: 0
   m_Name: EnemyShip
   m_TagString: Untagged
@@ -1111,7 +1111,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 109321589451998183}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.0018996856, y: 0.7227588, z: -0.000784416, w: 0.6910973}
+  m_LocalRotation: {x: -0.0018938694, y: 0.7227596, z: -0.000784681, w: 0.69109654}
   m_LocalPosition: {x: -22.27, y: 0.019920072, z: -44.09}
   m_LocalScale: {x: 0.25, y: 0.25, z: 0.25}
   m_ConstrainProportionsScale: 0
@@ -1124,7 +1124,7 @@ Transform:
   - {fileID: 7811736953697907390}
   - {fileID: 488916017383451800}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 99.471, z: 0}
+  m_LocalEulerAnglesHint: {x: -0.085, y: 92.566, z: -0.219}
 --- !u!114 &8231227268311468621
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1140,11 +1140,17 @@ MonoBehaviour:
   targetSurface: {fileID: 0}
   includeDeformers: 1
   verticalOffset: 0
+  followWaterCurrent: 0
+  currentSpeedMultiplier: 1
   length: 6.61
   width: 2.66
-  heightFollowSpeed: 1
-  normalFollowSpeed: 1
   showGizmos: 1
+  positionLerpSpeed: 5
+  rotationLerpSpeed: 2
+  useRigidbodyForCollision: 0
+  obstacleLayers:
+    serializedVersion: 2
+    m_Bits: 0
 --- !u!114 &7432609023691142593
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1157,35 +1163,50 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ebf29b1876ec9a340993103e0c191436, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CannonsController
-  lateralSpread: 0.1
-  verticalSpread: 0.1
-  speedVariance: 0.1
-  shotsPerBroadside: 5
-  cannonballsPerSide: 6
+  rowsOfGuns: 3
+  rowsPerShot: 1
+  intervalBetweenRows: 0.12
+  defaultRange: 40
+  minApex: 2
+  maxApex: 18
+  muzzleVelocity: 35
+  leftCannons:
+  - {fileID: 3616304965205829600}
+  - {fileID: 8526082100738654911}
+  - {fileID: 7026201676689244561}
+  - {fileID: 2883557860140697736}
+  - {fileID: 1941295126777196398}
+  - {fileID: 3833955752723691312}
+  - {fileID: 8661651827554940349}
+  - {fileID: 1380911837201745725}
+  - {fileID: 6809764941637492162}
+  - {fileID: 7512563985188131097}
+  - {fileID: 5246368177156123459}
+  - {fileID: 5149224548776016532}
+  rightCannons:
+  - {fileID: 4672726602836897409}
+  - {fileID: 5433267795389954138}
+  - {fileID: 922567620522580894}
+  - {fileID: 2042879941359222109}
+  - {fileID: 724769176283834902}
+  - {fileID: 2097275850838128402}
+  - {fileID: 1302533582900541594}
+  - {fileID: 4018700977424816813}
+  - {fileID: 6981189032259276274}
+  - {fileID: 7756129830141078930}
+  - {fileID: 735847737684947788}
+  - {fileID: 7850825749265508042}
+  frontCannons: []
+  backCannons: []
   leftCannonOrigin: {fileID: 6483776265383270804}
   rightCannonOrigin: {fileID: 2446602812979173912}
+  frontCannonOrigin: {fileID: 0}
+  backCannonOrigin: {fileID: 0}
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   arcMesh: {fileID: 0}
-  shotDistance: 40
-  minHeight: 2
-  maxHeight: 6
---- !u!114 &2910736831283122266
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 109321589451998183}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2e55c8a17fe25f64fb90ddac1f8db3a7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::AIShipController
-  player: {fileID: 0}
-  desiredCombatDistance: 20
-  distanceTolerance: 4
-  broadsideAngleTolerance: 12
-  fireCooldown: 4
+  fireSound: {fileID: 0}
+  fireVolume: 0.7
+  minFireInterval: 0.5
 --- !u!114 &2873097430092653796
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1198,17 +1219,58 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ea3b51b7d3ac5c0429af3c4b7dd53702, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ShipController
-  halfSailSpeed: 2
-  fullSailSpeed: 4
+  gear1Speed: 3
+  gear2Speed: 6
+  gear3Speed: 12
   acceleration: 1.5
-  turnPower: 100
-  turnInertia: 0.95
-  maxTurnSpeed: 25
+  gearDownDeceleration: 25
+  lowSpeedTurnRate: 45
+  highSpeedTurnRate: 18
+  turnAcceleration: 72
   leanAmount: 0.1
   leanSmoothing: 2
-  currentSail: 0
+  turnLeanBonus: 8
+  dashSpeed: 35
+  dashDuration: 0.6
+  dashCooldown: 4
+  currentGear: 0
   steeringInput: 0
   sailDelta: 0
+  sailHealth: {fileID: 3019368514287773637}
+  hullHealth: {fileID: 6556521951816116146}
+  sailDamageToHullRatio: 1
+  hullDisableThreshold: 30
+--- !u!114 &5387334552697610569
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 109321589451998183}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8dd06430ebdd4f4b8460f058200e68c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AIBrain
+  archetype: 0
+  detectionRange: 30
+  detectionMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  patrolRadius: 60
+  waypointArrivalDistance: 5
+  useInitialDestination: 0
+  initialDestination: {x: 0, y: 0, z: 0}
+  debugLog: 1
+  drawGizmos: 1
+  Ship: {fileID: 0}
+  Cannons: {fileID: 0}
+  CurrentTarget: {fileID: 0}
+  SpawnPosition: {x: 0, y: 0, z: 0}
+  InitialDestinationConsumed: 0
+  _stateName: None
+  _targetName: None
+  _enemyCount: 0
 --- !u!1 &115314143992125694
 GameObject:
   m_ObjectHideFlags: 0
@@ -9225,9 +9287,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &920508170786530660
 GameObject:
   m_ObjectHideFlags: 0
@@ -15774,9 +15837,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &1498361951291363380
 GameObject:
   m_ObjectHideFlags: 0
@@ -18768,9 +18832,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &1925705043090477360
 GameObject:
   m_ObjectHideFlags: 0
@@ -19271,9 +19336,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &2081207563635640752
 GameObject:
   m_ObjectHideFlags: 0
@@ -30280,9 +30346,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &3442946776052273224
 GameObject:
   m_ObjectHideFlags: 0
@@ -30894,7 +30961,7 @@ Transform:
   m_GameObject: {fileID: 3582948972071489851}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: -4.440001, y: -0.00000009685755, z: -0.000002861023}
+  m_LocalPosition: {x: -6.08, y: 0, z: -0.07}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -32471,9 +32538,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &3759922325679221466
 GameObject:
   m_ObjectHideFlags: 0
@@ -33954,9 +34022,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &3892385605829112303
 GameObject:
   m_ObjectHideFlags: 0
@@ -37510,9 +37579,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &4390242509603687582
 GameObject:
   m_ObjectHideFlags: 0
@@ -38471,9 +38541,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &4542337200416882401
 GameObject:
   m_ObjectHideFlags: 0
@@ -52820,7 +52891,8 @@ GameObject:
   - component: {fileID: 7811736953697907390}
   - component: {fileID: 6556521951816116146}
   - component: {fileID: 442563604288077432}
-  m_Layer: 0
+  - component: {fileID: 3399482151443477198}
+  m_Layer: 8
   m_Name: BodyHealth
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -52854,8 +52926,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 69fe2263915704d46806fdece5cf489e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HealthComponent
-  maxHealth: 100
-  currentHealth: 100
+  maxHealth: 50
+  currentHealth: 50
 --- !u!65 &442563604288077432
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -52877,6 +52949,19 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 9.66, y: 7.67, z: 34.94}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &3399482151443477198
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6128982165025940125}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a9d04cb415c44dc40b7f7dfad151b2c5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShipCollision
+  collisionType: 0
 --- !u!1 &6144789602806732438
 GameObject:
   m_ObjectHideFlags: 0
@@ -53701,9 +53786,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &6163980746837856348
 GameObject:
   m_ObjectHideFlags: 0
@@ -54074,9 +54160,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &6258479376062195505
 GameObject:
   m_ObjectHideFlags: 0
@@ -54501,9 +54588,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &6329265829443932627
 GameObject:
   m_ObjectHideFlags: 0
@@ -56415,9 +56503,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &6529846763765279759
 GameObject:
   m_ObjectHideFlags: 0
@@ -57301,9 +57390,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &6575810894754123153
 GameObject:
   m_ObjectHideFlags: 0
@@ -59729,9 +59819,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &6838831450397357605
 GameObject:
   m_ObjectHideFlags: 0
@@ -60071,9 +60162,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &6948737513566325795
 GameObject:
   m_ObjectHideFlags: 0
@@ -63059,9 +63151,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &7201373274257968600
 GameObject:
   m_ObjectHideFlags: 0
@@ -66290,7 +66383,8 @@ GameObject:
   - component: {fileID: 488916017383451800}
   - component: {fileID: 3019368514287773637}
   - component: {fileID: 6720190895903070815}
-  m_Layer: 0
+  - component: {fileID: 8295883023495223022}
+  m_Layer: 9
   m_Name: SailHealth
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -66347,6 +66441,19 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 3.4, y: 16.56, z: 31.53}
   m_Center: {x: 0, y: 1.2, z: 0}
+--- !u!114 &8295883023495223022
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7591017423208377806}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a9d04cb415c44dc40b7f7dfad151b2c5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShipCollision
+  collisionType: 1
 --- !u!1 &7593164078351885840
 GameObject:
   m_ObjectHideFlags: 0
@@ -67513,9 +67620,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &7661551827858619177
 GameObject:
   m_ObjectHideFlags: 0
@@ -69579,9 +69687,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &7934583507577090960
 GameObject:
   m_ObjectHideFlags: 0
@@ -75023,9 +75132,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &8623963206497327040
 GameObject:
   m_ObjectHideFlags: 0
@@ -75115,7 +75225,7 @@ Transform:
   m_GameObject: {fileID: 8628337353689801437}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 4.28, y: 0, z: -0}
+  m_LocalPosition: {x: 6.08, y: -0.01, z: 0.08}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -76348,9 +76458,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &8768340308636416245
 GameObject:
   m_ObjectHideFlags: 0
@@ -76559,9 +76670,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &8790639299959630697
 GameObject:
   m_ObjectHideFlags: 0
@@ -78514,9 +78626,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &8908934424357326378
 GameObject:
   m_ObjectHideFlags: 0
@@ -80237,9 +80350,10 @@ MonoBehaviour:
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   muzzleFlash: {fileID: 0}
   smoke: {fileID: 0}
-  muzzleVelocity: 25
+  enableRecoil: 1
   recoilDistance: 0.3
-  baseElevationDegrees: 100
+  recoilSpeed: 8
+  returnSpeed: 2
 --- !u!1 &9031749431183516787
 GameObject:
   m_ObjectHideFlags: 0

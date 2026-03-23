@@ -66,6 +66,20 @@ public class ShipController : MonoBehaviour
     public float CurrentSpeed => currentForwardSpeed;
     public float MaxSpeed => gear3Speed;
 
+    /// <summary>
+    /// Called by ShipPhysicsBody every frame the hull is in contact with an obstacle.
+    /// Zeroes the velocity component going into the wall; the along-wall component
+    /// survives — so you slide but cannot push through.
+    /// </summary>
+    public void ApplyWallSlide(Vector3 wallNormal)
+    {
+        // ProjectOnPlane magnitude = sin(angle between forward and wallNormal)
+        //   0 → heading straight into wall → full stop
+        //   1 → heading parallel to wall   → no speed loss
+        float slideFactor = Vector3.ProjectOnPlane(transform.forward, wallNormal).magnitude;
+        currentForwardSpeed *= slideFactor;
+    }
+
     void Update()
     {
         dashCooldownTimer -= Time.deltaTime;

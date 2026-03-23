@@ -21,6 +21,13 @@ public class Cannonball : MonoBehaviour
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
+
+        int layer = LayerMask.NameToLayer("Cannonball");
+        if (layer >= 0)
+            gameObject.layer = layer;
+        else
+            Debug.LogWarning("[Cannonball] Layer 'Cannonball' not found. " +
+                             "Run  Tools > TwoPiece > Setup Physics Layers.", this);
     }
 
     void Start()

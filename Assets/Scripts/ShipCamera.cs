@@ -115,6 +115,23 @@ public class ShipCamera : MonoBehaviour
     float aimYawVelocity;
     float rollVelocity;
 
+    // Collision shake state
+    [Header("Collision Shake")]
+    [Tooltip("How far the camera displaces at full shake intensity.")]
+    public float shakeMagnitude = 0.4f;
+
+    [Tooltip("Seconds for the shake to fully fade out.")]
+    public float shakeDuration  = 0.3f;
+
+    float _shakeIntensity;  // 0–1, decays to zero each frame
+
+    /// <summary>Trigger a camera shake. force 0–1 scales the magnitude.</summary>
+    public void Shake(float force)
+    {
+        // Take the larger value so a harder hit mid-shake doesn't reduce it.
+        _shakeIntensity = Mathf.Max(_shakeIntensity, Mathf.Clamp01(force));
+    }
+
     bool IsInTravelMode => isTraveling || previewTravelMode;
 
     // Public getters
@@ -404,6 +421,13 @@ public class ShipCamera : MonoBehaviour
             ref currentVelocity,
             smoothTime
         );
+
+        // Apply and decay collision shake offset
+        if (_shakeIntensity > 0f)
+        {
+            transform.position += Random.insideUnitSphere * (shakeMagnitude * _shakeIntensity);
+            _shakeIntensity     = Mathf.MoveTowards(_shakeIntensity, 0f, Time.deltaTime / shakeDuration);
+        }
     }
 
     void UpdateFieldOfView()
