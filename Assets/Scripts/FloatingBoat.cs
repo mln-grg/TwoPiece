@@ -93,7 +93,19 @@ public class FloatingBoat : MonoBehaviour
 
         // Average height of the boat
         float avgHeight = (hBow + hStern + hLeft + hRight) / 4f; // Compute average water height
+
+        // Guard: water sim can return NaN on first editor frames before it's fully initialised
+        if (float.IsNaN(avgHeight) || float.IsInfinity(avgHeight)) return;
+
+        // Guard: smoothedPosition.y may be NaN if a previous frame corrupted it
+        if (float.IsNaN(smoothedPosition.y) || float.IsInfinity(smoothedPosition.y))
+            smoothedPosition = transform.position;
+
         Vector3 targetWavePos = new Vector3(transform.position.x, avgHeight + verticalOffset, transform.position.z); // Target wave position
+
+        // Guard: waterNormal is zero (and .normalized = NaN) when all four sample points
+        // land at exactly the same height, making forward/right dirs parallel.
+        if (waterNormal == Vector3.zero) waterNormal = Vector3.up;
 
         // Smooth position and rotation
         smoothedPosition.y = Mathf.Lerp(smoothedPosition.y, targetWavePos.y, positionLerpSpeed * Time.deltaTime); // Smooth vertical motion
@@ -143,9 +155,14 @@ public class FloatingBoat : MonoBehaviour
         searchParams.excludeSimulation = false; // Include simulation
 
         if (targetSurface.ProjectPointOnWaterSurface(searchParams, out searchResult)) // Project point onto water
-            return searchResult.projectedPositionWS.y; // Return water height
+        {
+            float y = searchResult.projectedPositionWS.y;
+            if (!float.IsNaN(y) && !float.IsInfinity(y))
+                return y;
+        }
 
-        return worldPos.y; // Default to current y
+        // Fall back to current Y, guarded against NaN (water sim may not be ready yet)
+        return (!float.IsNaN(worldPos.y) && !float.IsInfinity(worldPos.y)) ? worldPos.y : 0f;
     }
 
     private Vector3 GetWaterCurrentDirection(Vector3 worldPos)
