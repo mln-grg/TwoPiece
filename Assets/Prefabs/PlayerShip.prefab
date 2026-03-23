@@ -10905,7 +10905,7 @@ Transform:
   m_GameObject: {fileID: 1277700636404801061}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0.19, y: 8.41, z: -15.68}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -14674,7 +14674,7 @@ Transform:
   m_GameObject: {fileID: 1584427529763119883}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: -4.56, y: 4.48, z: 2.49}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -16534,7 +16534,7 @@ Transform:
   m_GameObject: {fileID: 1837146000204538350}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: -0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: -4.440001, y: -0.00000009685755, z: -0.000002861023}
+  m_LocalPosition: {x: -3.75, y: 4.27, z: -2.67}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -23911,7 +23911,7 @@ Transform:
   m_GameObject: {fileID: 2723211510871949370}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0.29, y: 6.09, z: 11.83}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -37215,7 +37215,7 @@ Transform:
   m_GameObject: {fileID: 3993988192861944157}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 4.28, y: 0, z: -0}
+  m_LocalPosition: {x: 4.42, y: 4.26, z: -2.3}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -42041,13 +42041,14 @@ GameObject:
   - component: {fileID: 7402871823254621341}
   - component: {fileID: 5287298244391791946}
   - component: {fileID: 7672385514372895695}
-  m_Layer: 0
+  - component: {fileID: 3071083316594531271}
+  m_Layer: 9
   m_Name: SailHealth
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &7402871823254621341
 Transform:
   m_ObjectHideFlags: 0
@@ -42057,7 +42058,7 @@ Transform:
   m_GameObject: {fileID: 4580444738032144061}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.07, y: 16.65, z: -1.84}
+  m_LocalPosition: {x: 0.07, y: 16.93, z: -1.84}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -42070,7 +42071,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4580444738032144061}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 69fe2263915704d46806fdece5cf489e, type: 3}
   m_Name: 
@@ -42094,10 +42095,23 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 0
+  m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3.4, y: 16.56, z: 31.53}
+  m_Size: {x: 4.9, y: 15.99, z: 28.3}
   m_Center: {x: 0, y: 1.2, z: 0}
+--- !u!114 &3071083316594531271
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4580444738032144061}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a9d04cb415c44dc40b7f7dfad151b2c5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShipCollision
+  collisionType: 1
 --- !u!1 &4598088890419625015
 GameObject:
   m_ObjectHideFlags: 0
@@ -57770,7 +57784,7 @@ Transform:
   m_GameObject: {fileID: 6118389399500736032}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 3.46, y: 4.58, z: 1.44}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -63665,13 +63679,14 @@ GameObject:
   - component: {fileID: 8072898144347003519}
   - component: {fileID: 4033859373264316647}
   - component: {fileID: 8998530515303218002}
-  m_Layer: 0
+  - component: {fileID: 4868423302890605606}
+  m_Layer: 8
   m_Name: BodyHealth
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &8072898144347003519
 Transform:
   m_ObjectHideFlags: 0
@@ -63681,7 +63696,7 @@ Transform:
   m_GameObject: {fileID: 6853985691623903856}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.05, y: 3.58, z: -1.26}
+  m_LocalPosition: {x: 0.05, y: 4.19, z: -1.26}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -63694,7 +63709,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6853985691623903856}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 69fe2263915704d46806fdece5cf489e, type: 3}
   m_Name: 
@@ -63718,10 +63733,23 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 0
+  m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 9.66, y: 7.67, z: 34.94}
-  m_Center: {x: 0, y: 0, z: 0}
+  m_Size: {x: 9.2, y: 7.51, z: 33.51}
+  m_Center: {x: 0, y: -1.45, z: 0}
+--- !u!114 &4868423302890605606
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6853985691623903856}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a9d04cb415c44dc40b7f7dfad151b2c5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ShipCollision
+  collisionType: 0
 --- !u!1 &6863146478211861741
 GameObject:
   m_ObjectHideFlags: 0
@@ -74322,7 +74350,7 @@ GameObject:
   - component: {fileID: 3170914235430874745}
   m_Layer: 0
   m_Name: PlayerShip
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -74335,7 +74363,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8423095137281784711}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.0026778127, y: 0.72275645, z: -0.001618751, w: 0.6910958}
+  m_LocalRotation: {x: 0.0026795906, y: 0.7227568, z: -0.0016154696, w: 0.69109535}
   m_LocalPosition: {x: -22.27, y: 0.0021907685, z: -19.19}
   m_LocalScale: {x: 0.25, y: 0.25, z: 0.25}
   m_ConstrainProportionsScale: 0
@@ -74351,7 +74379,7 @@ Transform:
   - {fileID: 5977693658512634848}
   - {fileID: 198148971117865962}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 99.471, z: 0}
+  m_LocalEulerAnglesHint: {x: 0.346, y: 92.566, z: 0.094}
 --- !u!114 &5321003724634248717
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -74390,24 +74418,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ea3b51b7d3ac5c0429af3c4b7dd53702, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ShipController
-  halfSailSpeed: 2
-  fullSailSpeed: 4
+  gear1Speed: 2
+  gear2Speed: 4
+  gear3Speed: 8
   acceleration: 1.5
-  deceleration: 2.5
-  lowSpeedTurnRate: 45
-  highSpeedTurnRate: 28
-  steeringResponsiveness: 8
-  leanAmount: 0.1
+  gearDownDeceleration: 2.5
+  lowSpeedTurnRate: 18
+  highSpeedTurnRate: 12
+  turnAcceleration: 72
+  leanAmount: 0
   leanSmoothing: 2
   turnLeanBonus: 8
-  dashSpeed: 35
+  dashSpeed: 8
   dashDuration: 0.6
   dashCooldown: 4
-  currentSail: 0
+  currentGear: 0
   steeringInput: 0
   sailDelta: 0
-  sailHealth: {fileID: 0}
-  hullHealth: {fileID: 0}
+  sailHealth: {fileID: 5287298244391791946}
+  hullHealth: {fileID: 4033859373264316647}
   sailDamageToHullRatio: 1
   hullDisableThreshold: 30
 --- !u!114 &1048261964065110481
@@ -74422,21 +74451,49 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ebf29b1876ec9a340993103e0c191436, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CannonsController
-  rowsOfGuns: 3
+  rowsOfGuns: 2
   rowsPerShot: 1
   intervalBetweenRows: 0.15
   defaultRange: 40
   minApex: 3
   maxApex: 14
   muzzleVelocity: 35
-  leftCannons: []
-  rightCannons: []
-  frontCannons: []
-  backCannons: []
+  leftCannons:
+  - {fileID: 8774993715651225040}
+  - {fileID: 7439592394938408476}
+  - {fileID: 4401660422559115821}
+  - {fileID: 7819847226655089442}
+  - {fileID: 1554685528064679177}
+  - {fileID: 3169997124748081597}
+  - {fileID: 3236626432786244345}
+  - {fileID: 6730183244905804730}
+  - {fileID: 1383973189082863977}
+  - {fileID: 4977694007277653520}
+  - {fileID: 6563025205323193454}
+  - {fileID: 6672474897118797185}
+  rightCannons:
+  - {fileID: 3882604874934232909}
+  - {fileID: 5861018658056726411}
+  - {fileID: 292323160437524507}
+  - {fileID: 6984626175660560611}
+  - {fileID: 4653537319991869450}
+  - {fileID: 1182940106768426907}
+  - {fileID: 8953991779248144948}
+  - {fileID: 2357942395036594197}
+  - {fileID: 6831760853538322875}
+  - {fileID: 5938910222484895812}
+  - {fileID: 4808927815818311881}
+  - {fileID: 1449971439561192852}
+  frontCannons:
+  - {fileID: 3843882023350488937}
+  - {fileID: 6582992180921089163}
+  backCannons:
+  - {fileID: 3408846712839485681}
+  - {fileID: 5534971480968502999}
   leftCannonOrigin: {fileID: 5337561156839747992}
   rightCannonOrigin: {fileID: 5640285866849460357}
-  frontCannonOrigin: {fileID: 0}
-  backCannonOrigin: {fileID: 0}
+  frontCannonOrigin: {fileID: 969527180920565014}
+  backCannonOrigin: {fileID: 5977693658512634848}
   cannonballPrefab: {fileID: 5765859251703506136, guid: 3cd0bbea0e0212641a67ea3c216d9fe9, type: 3}
   arcMesh: {fileID: 0}
   fireSound: {fileID: 0}
@@ -74458,9 +74515,9 @@ MonoBehaviour:
   aimLayers:
     serializedVersion: 2
     m_Bits: 0
-  maxAimDistance: 100
-  minAimAngle: -15
-  maxAimAngle: 45
+  maxAimDistance: 50
+  minAimAngle: 6
+  maxAimAngle: 25
   cameraSensitivity: 2
   invertY: 0
 --- !u!1 &8425375771406342305
