@@ -79,6 +79,19 @@ public class PlayerShipInput : MonoBehaviour
 
     void HandleAimingAndFiring()
     {
+        // Combat is disabled at Gear 3 (travel speed) — the player must drop a gear first.
+        // If they somehow reach Gear 3 while already aiming, forcibly exit aim mode.
+        if (ship.currentGear == GearState.Gear3)
+        {
+            if (wasAiming)
+            {
+                if (shipCamera) shipCamera.ExitAimMode();
+                cannons.HidePreview();
+                wasAiming = false;
+            }
+            return;
+        }
+
         bool aimButton = Input.GetMouseButton(1); // RMB to aim
         bool fireButton = Input.GetMouseButtonDown(0); // LMB to fire
 
