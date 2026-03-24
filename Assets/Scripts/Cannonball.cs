@@ -78,7 +78,7 @@ public class Cannonball : MonoBehaviour
             Instantiate(splashVFX, col.contacts[0].point, Quaternion.identity);
 
         IDamageable damageable =
-            col.gameObject.GetComponentInParent<IDamageable>();
+            col.collider.GetComponent<IDamageable>();
 
         if (damageable != null)
         {

@@ -121,6 +121,21 @@ public class AIBrain : MonoBehaviour
     {
         if (_currentState == null) return;
 
+        // Ship has been destroyed — shut everything down immediately.
+        if (Ship.IsDestroyed)
+        {
+            _currentState.OnExit(this);
+            _currentState  = null;
+            CurrentTarget  = null;
+            Ship.steeringInput = 0f;
+
+            // Kill any broadside volley that is already mid-coroutine.
+            Cannons.StopAllCoroutines();
+
+            enabled = false;   // stop this Update from running again
+            return;
+        }
+
         UpdateInspectorReadout();
 
         AIState next = _currentState.Tick(this, Time.deltaTime);
@@ -199,22 +214,23 @@ public class AIBrain : MonoBehaviour
     }
 
     // ─── Damage Subscriptions ──────────────────────────────────────────────────
+    // Scans ALL HealthComponents in children so aggro fires regardless of whether
+    // ShipController.hullHealth / sailHealth are wired in the Inspector.
 
     void SubscribeToDamageEvents()
     {
-        if (Ship.hullHealth != null) Ship.hullHealth.OnDamaged += OnHullDamaged;
-        if (Ship.sailHealth != null) Ship.sailHealth.OnDamaged += OnSailDamaged;
+        foreach (HealthComponent hc in GetComponentsInChildren<HealthComponent>())
+            hc.OnDamaged += OnAnyPartDamaged;
     }
 
     void UnsubscribeFromDamageEvents()
     {
-        if (Ship.hullHealth != null) Ship.hullHealth.OnDamaged -= OnHullDamaged;
-        if (Ship.sailHealth != null) Ship.sailHealth.OnDamaged -= OnSailDamaged;
+        foreach (HealthComponent hc in GetComponentsInChildren<HealthComponent>())
+            hc.OnDamaged -= OnAnyPartDamaged;
     }
 
-    // DamageInfo.source is the ship root (Owner) that fired the cannonball
-    void OnHullDamaged(DamageInfo info) => RegisterAttacker(info.source);
-    void OnSailDamaged(DamageInfo info) => RegisterAttacker(info.source);
+    // Any hit on any part of this ship (hull or sail) triggers retaliation.
+    void OnAnyPartDamaged(DamageInfo info) => RegisterAttacker(info.source);
 
     // ─── Utilities ─────────────────────────────────────────────────────────────
 
