@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public enum GearState { Idle, Gear1, Gear2, Gear3 }
@@ -63,8 +64,9 @@ public class ShipController : MonoBehaviour
     bool hullDisabled;
     bool destroyed;
 
-    public float CurrentSpeed => currentForwardSpeed;
-    public float MaxSpeed => gear3Speed;
+    public float CurrentSpeed  => currentForwardSpeed;
+    public float MaxSpeed      => gear3Speed;
+    public bool  IsDestroyed   => destroyed;
 
     /// <summary>
     /// Called by ShipPhysicsBody every frame the hull is in contact with an obstacle.
@@ -79,6 +81,73 @@ public class ShipController : MonoBehaviour
         float slideFactor = Vector3.ProjectOnPlane(transform.forward, wallNormal).magnitude;
         currentForwardSpeed *= slideFactor;
     }
+
+    void Start()
+    {
+        // Auto-discover health components when Inspector references are not set.
+        // Walks children looking for ShipCollision + HealthComponent pairs.
+        if (hullHealth == null || sailHealth == null)
+        {
+            foreach (ShipCollision sc in GetComponentsInChildren<ShipCollision>())
+            {
+                HealthComponent hc = sc.GetComponent<HealthComponent>();
+                if (hc == null) continue;
+                if (sc.collisionType == ShipCollisionType.Hull && hullHealth == null) hullHealth = hc;
+                if (sc.collisionType == ShipCollisionType.Sail && sailHealth == null) sailHealth = hc;
+            }
+        }
+
+        if (hullHealth != null)
+        {
+            hullHealth.OnDamaged   += OnHullDamaged;
+            hullHealth.OnDestroyed += OnHullDestroyed;
+        }
+
+        if (sailHealth != null)
+            sailHealth.OnDestroyed += OnSailDestroyed;
+    }
+
+    void OnDestroy()
+    {
+        if (hullHealth != null)
+        {
+            hullHealth.OnDamaged   -= OnHullDamaged;
+            hullHealth.OnDestroyed -= OnHullDestroyed;
+        }
+
+        if (sailHealth != null)
+            sailHealth.OnDestroyed -= OnSailDestroyed;
+    }
+
+    // ── Health handlers ────────────────────────────────────────────────────
+
+    void OnHullDamaged(DamageInfo info)
+    {
+        // Cross the disable threshold: ship becomes sluggish and can't change gear
+        if (!hullDisabled && hullHealth.currentHealth <= hullDisableThreshold)
+            hullDisabled = true;
+    }
+
+    void OnHullDestroyed()
+    {
+        // Ship is dead — stop it immediately and destroy after 5 seconds
+        destroyed = true;
+        StartCoroutine(DestroyShipAfterDelay(5f));
+    }
+
+    void OnSailDestroyed()
+    {
+        // No sails — locked to idle, cannot move under own power
+        sailsDestroyed = true;
+    }
+
+    IEnumerator DestroyShipAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        Destroy(gameObject);
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
 
     void Update()
     {

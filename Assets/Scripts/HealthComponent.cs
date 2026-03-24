@@ -12,7 +12,6 @@ public struct DamageInfo
     public Vector3 hitPoint;
     public GameObject source;
 }
-[RequireComponent(typeof(ShipCollision))]
 public class HealthComponent : MonoBehaviour, IDamageable
 {
     public float maxHealth = 100f;
