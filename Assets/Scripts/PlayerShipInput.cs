@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 [RequireComponent(typeof(ShipController))]
@@ -19,6 +18,8 @@ public class PlayerShipInput : MonoBehaviour
     [Header("Camera Control")]
     public float cameraSensitivity = 2f;
     public bool invertY = false;
+    [Tooltip("Speed fraction (0–1) at which the travel camera kicks in")]
+    public float travelSpeedThreshold = 0.75f;
 
     ShipController ship;
     CannonsController cannons;
@@ -28,7 +29,7 @@ public class PlayerShipInput : MonoBehaviour
     float aimPitch;
     bool wasAiming;
 
-    GearState prevGear;
+    bool wasInTravelMode;
 
     void Awake()
     {
@@ -56,24 +57,25 @@ public class PlayerShipInput : MonoBehaviour
         // Steering
         ship.steeringInput = Input.GetAxis("Horizontal");
 
-        // Gear control
-        if (Input.GetKeyDown(KeyCode.W)) ship.sailDelta = +1;
-        if (Input.GetKeyDown(KeyCode.S)) ship.sailDelta = -1;
+        // Throttle / brake — held keys give momentum-based acceleration
+        ship.throttleInput = Input.GetKey(KeyCode.W) ? 1f : 0f;
+        ship.brakeInput    = Input.GetKey(KeyCode.S) ? 1f : 0f;
 
         // Dash
         if (Input.GetKeyDown(KeyCode.Space))
             ship.TryDash();
 
-        // Trigger travel camera when reaching or leaving Gear 3
-        GearState currentGear = ship.currentGear;
-        if (currentGear != prevGear)
+        // Travel camera: enters at high speed, exits when slowing back down
+        bool highSpeed = ship.SpeedRatio >= travelSpeedThreshold;
+        if (highSpeed && !wasInTravelMode)
         {
-            if (currentGear == GearState.Gear3)
-                shipCamera.EnterTravelMode();
-            else if (prevGear == GearState.Gear3)
-                shipCamera.ExitTravelMode();
-
-            prevGear = currentGear;
+            shipCamera.EnterTravelMode();
+            wasInTravelMode = true;
+        }
+        else if (!highSpeed && wasInTravelMode)
+        {
+            shipCamera.ExitTravelMode();
+            wasInTravelMode = false;
         }
     }
 
