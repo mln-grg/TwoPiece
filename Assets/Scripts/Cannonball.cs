@@ -42,7 +42,20 @@ public class Cannonball : MonoBehaviour
         analyticFlight = true;
 
         rb.isKinematic = false;
-        rb.useGravity = false;
+        rb.useGravity  = false;
+    }
+
+    /// <summary>
+    /// Fires the projectile in a straight line — no arc, no gravity.
+    /// Used by FreeAimMode where the player aims directly with the crosshair.
+    /// </summary>
+    public void LaunchStraight(Vector3 direction, float speed)
+    {
+        analyticFlight = false;
+
+        rb.isKinematic    = false;
+        rb.useGravity     = false;
+        rb.linearVelocity = direction.normalized * speed;
     }
 
     void FixedUpdate()

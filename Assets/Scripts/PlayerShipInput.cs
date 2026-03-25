@@ -1,6 +1,8 @@
 using System;
 using UnityEngine;
 
+public enum FreeAimSubMode { SingleShot, FullyAutomatic }
+
 [RequireComponent(typeof(ShipController))]
 [RequireComponent(typeof(CannonsController))]
 public class PlayerShipInput : MonoBehaviour
@@ -11,7 +13,7 @@ public class PlayerShipInput : MonoBehaviour
     [Header("Aiming")]
     public LayerMask aimLayers;
     public float maxAimDistance = 100f;
-    
+
     [Tooltip("How far up/down you can aim")]
     public float minAimAngle = -15f;
     public float maxAimAngle = 45f;
@@ -20,23 +22,48 @@ public class PlayerShipInput : MonoBehaviour
     public float cameraSensitivity = 2f;
     public bool invertY = false;
 
+    [Header("Free Aim Mode")]
+    [Tooltip("Optional HUD component for the free-aim crosshair — auto-found on this GameObject if blank")]
+    public FreeAimHUD freeAimHUD;
+
+    [Header("Full Auto Settings")]
+    [Tooltip("Fire interval at the START of holding LMB (slowest rate)")]
+    public float autoFireIntervalMax = 0.65f;
+    [Tooltip("Fire interval after fully spun-up (fastest rate)")]
+    public float autoFireIntervalMin = 0.08f;
+    [Tooltip("Seconds of continuous fire before reaching maximum fire rate")]
+    public float autoAccelTime       = 3f;
+
     ShipController ship;
     CannonsController cannons;
 
-    // Aim state
+    // Normal aim state
     Vector3 currentAimPoint;
     float aimPitch;
     bool wasAiming;
+
+    // Free aim state
+    bool           isFreeAiming;
+    FreeAimSubMode freeAimSubMode = FreeAimSubMode.SingleShot;
+
+    // Full auto state
+    bool  autoFiring;
+    float autoHoldTime;   // accumulates while LMB held — drives acceleration
+    float autoFireTimer;  // counts up to the current fire interval
+
 
     GearState prevGear;
 
     void Awake()
     {
-        ship = GetComponent<ShipController>();
+        ship    = GetComponent<ShipController>();
         cannons = GetComponent<CannonsController>();
 
         if (!shipCamera)
             shipCamera = FindObjectOfType<ShipCamera>();
+
+        if (!freeAimHUD)
+            freeAimHUD = GetComponent<FreeAimHUD>();
     }
 
     private void Start()
@@ -83,7 +110,7 @@ public class PlayerShipInput : MonoBehaviour
 
     void HandleAimingAndFiring()
     {
-        // Aiming and firing are locked during a dash — force-exit aim mode if active
+        // ── Locked during a dash ───────────────────────────────────────────────
         if (ship.IsDashing)
         {
             if (wasAiming)
@@ -92,11 +119,11 @@ public class PlayerShipInput : MonoBehaviour
                 cannons.HidePreview();
                 wasAiming = false;
             }
+            if (isFreeAiming) ExitFreeAimMode();
             return;
         }
 
-        // Combat is disabled at Gear 3 (travel speed) — the player must drop a gear first.
-        // If they somehow reach Gear 3 while already aiming, forcibly exit aim mode.
+        // ── Combat disabled at Gear 3 ──────────────────────────────────────────
         if (ship.currentGear == GearState.Gear3)
         {
             if (wasAiming)
@@ -105,39 +132,160 @@ public class PlayerShipInput : MonoBehaviour
                 cannons.HidePreview();
                 wasAiming = false;
             }
+            if (isFreeAiming) ExitFreeAimMode();
             return;
         }
 
-        bool aimButton = Input.GetMouseButton(1); // RMB to aim
-        bool fireButton = Input.GetMouseButtonDown(0); // LMB to fire
+        // ── FreeAimMode: Shift held ────────────────────────────────────────────
+        bool shiftHeld = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
 
-        // Enter/Exit aim mode
+        if (shiftHeld)
+        {
+            // Force-exit normal RMB aim mode so the two modes never overlap
+            if (wasAiming)
+            {
+                if (shipCamera) shipCamera.ExitAimMode();
+                cannons.HidePreview();
+                wasAiming = false;
+            }
+            HandleFreeAimMode();
+            return;
+        }
+
+        // Shift released — leave FreeAimMode
+        if (isFreeAiming)
+            ExitFreeAimMode();
+
+        // ── Normal RMB aiming ─────────────────────────────────────────────────
+        bool aimButton  = Input.GetMouseButton(1);       // RMB
+        bool fireButton = Input.GetMouseButtonDown(0);   // LMB
+
         if (aimButton && !wasAiming)
         {
-            if (shipCamera)
-                shipCamera.EnterAimMode();
+            if (shipCamera) shipCamera.EnterAimMode();
             wasAiming = true;
         }
         else if (!aimButton && wasAiming)
         {
-            if (shipCamera)
-                shipCamera.ExitAimMode();
+            if (shipCamera) shipCamera.ExitAimMode();
             cannons.HidePreview();
             wasAiming = false;
         }
 
-        // While aiming, update trajectory preview
         if (aimButton)
         {
             UpdateAimPoint();
             ShowTrajectoryPreview();
         }
 
-        // Fire when LMB pressed while holding RMB
         if (fireButton && aimButton)
-        {
             FireCurrentSide();
+    }
+
+    // ── FreeAimMode ───────────────────────────────────────────────────────────
+
+    void HandleFreeAimMode()
+    {
+        // First frame entering FreeAimMode
+        if (!isFreeAiming)
+        {
+            isFreeAiming  = true;
+            autoFiring    = false;
+            autoHoldTime  = 0f;
+            autoFireTimer = 0f;
+
+            cannons.EnterFreeAim();
+
+            if (shipCamera) shipCamera.EnterFreeAimMode();
+            if (freeAimHUD) freeAimHUD.Show(freeAimSubMode);
         }
+
+        // Toggle sub-mode with F (only while in FreeAimMode)
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            freeAimSubMode = freeAimSubMode == FreeAimSubMode.SingleShot
+                ? FreeAimSubMode.FullyAutomatic
+                : FreeAimSubMode.SingleShot;
+
+            if (freeAimHUD) freeAimHUD.UpdateSubMode(freeAimSubMode);
+
+            // Cancel any in-progress auto fire when switching modes
+            autoFiring    = false;
+            autoHoldTime  = 0f;
+            autoFireTimer = 0f;
+        }
+
+        // No arc preview — straight-line shots, the crosshair is the only aiming aid.
+        // Make sure any leftover broadside arc from normal mode is hidden.
+        cannons.HidePreview();
+
+        // ── Input ─────────────────────────────────────────────────────────────
+        bool lmbHeld = Input.GetMouseButton(0);
+        bool lmbDown = Input.GetMouseButtonDown(0);
+
+        if (freeAimSubMode == FreeAimSubMode.SingleShot)
+        {
+            autoFiring   = false;
+            autoHoldTime = 0f;
+            if (freeAimHUD) freeAimHUD.SetAutoProgress(0f, false);
+
+            if (lmbDown)
+                cannons.FireFreeAimCannons();
+        }
+        else // FullyAutomatic
+        {
+            if (lmbHeld)
+            {
+                if (!autoFiring)
+                {
+                    // Fire the very first shot the instant LMB goes down
+                    autoFiring    = true;
+                    autoHoldTime  = 0f;
+                    autoFireTimer = 0f;
+                    cannons.FireFreeAimCannons();
+                }
+                else
+                {
+                    autoHoldTime += Time.deltaTime;
+
+                    // Acceleration: interpolate from slow to fast over autoAccelTime seconds
+                    float accel           = Mathf.Clamp01(autoHoldTime / autoAccelTime);
+                    float currentInterval = Mathf.Lerp(autoFireIntervalMax, autoFireIntervalMin, accel);
+
+                    if (freeAimHUD) freeAimHUD.SetAutoProgress(accel, true);
+
+                    autoFireTimer += Time.deltaTime;
+                    if (autoFireTimer >= currentInterval)
+                    {
+                        autoFireTimer = 0f;
+                        cannons.FireFreeAimCannons();
+                    }
+                }
+            }
+            else
+            {
+                // LMB released — stop and reset acceleration
+                if (autoFiring && freeAimHUD) freeAimHUD.SetAutoProgress(0f, false);
+
+                autoFiring    = false;
+                autoHoldTime  = 0f;
+                autoFireTimer = 0f;
+            }
+        }
+    }
+
+    void ExitFreeAimMode()
+    {
+        isFreeAiming  = false;
+        autoFiring    = false;
+        autoHoldTime  = 0f;
+        autoFireTimer = 0f;
+
+        cannons.ExitFreeAim();
+
+        if (shipCamera) shipCamera.ExitFreeAimMode();
+        cannons.HidePreview();
+        if (freeAimHUD) freeAimHUD.Hide();
     }
 
     void UpdateAimPoint()
