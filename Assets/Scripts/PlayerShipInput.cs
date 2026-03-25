@@ -53,6 +53,9 @@ public class PlayerShipInput : MonoBehaviour
 
     void HandleMovementInput()
     {
+        // All movement input is suppressed during a dash
+        if (ship.IsDashing) return;
+
         // Steering
         ship.steeringInput = Input.GetAxis("Horizontal");
 
@@ -60,9 +63,10 @@ public class PlayerShipInput : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.W)) ship.sailDelta = +1;
         if (Input.GetKeyDown(KeyCode.S)) ship.sailDelta = -1;
 
-        // Dash
-        if (Input.GetKeyDown(KeyCode.Space))
-            ship.TryDash();
+        // Dashes — forward / left / right
+        if (Input.GetKeyDown(KeyCode.Space)) ship.TryDash(DashDirection.Forward);
+        if (Input.GetKeyDown(KeyCode.Q))     ship.TryDash(DashDirection.Left);
+        if (Input.GetKeyDown(KeyCode.E))     ship.TryDash(DashDirection.Right);
 
         // Trigger travel camera when reaching or leaving Gear 3
         GearState currentGear = ship.currentGear;
@@ -79,6 +83,18 @@ public class PlayerShipInput : MonoBehaviour
 
     void HandleAimingAndFiring()
     {
+        // Aiming and firing are locked during a dash — force-exit aim mode if active
+        if (ship.IsDashing)
+        {
+            if (wasAiming)
+            {
+                if (shipCamera) shipCamera.ExitAimMode();
+                cannons.HidePreview();
+                wasAiming = false;
+            }
+            return;
+        }
+
         // Combat is disabled at Gear 3 (travel speed) — the player must drop a gear first.
         // If they somehow reach Gear 3 while already aiming, forcibly exit aim mode.
         if (ship.currentGear == GearState.Gear3)

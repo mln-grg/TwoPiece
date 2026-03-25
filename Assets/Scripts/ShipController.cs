@@ -1,7 +1,8 @@
 using System.Collections;
 using UnityEngine;
 
-public enum GearState { Idle, Gear1, Gear2, Gear3 }
+public enum GearState    { Idle, Gear1, Gear2, Gear3 }
+public enum DashDirection { Forward, Left, Right }
 
 public class ShipController : MonoBehaviour
 {
@@ -31,14 +32,24 @@ public class ShipController : MonoBehaviour
     [Tooltip("Additional lean when turning hard")]
     public float turnLeanBonus = 8f;
 
-    [Header("Dash/Boost")]
-    public float dashSpeed = 35f;
-    public float dashDuration = 0.6f;
-    public float dashCooldown = 4f;
+    [Header("Dash")]
+    [Tooltip("Distance covered by a forward dash (units).")]
+    public float forwardDashDistance = 12f;
 
-    bool isDashing;
-    float dashTimer;
-    float dashCooldownTimer;
+    [Tooltip("Distance covered by a left/right side dash (units).")]
+    public float sideDashDistance = 7f;
+
+    [Tooltip("Duration of a single dash in seconds — lower = snappier burst.")]
+    public float dashDuration = 0.25f;
+
+    [Tooltip("Seconds before another dash is allowed after one finishes.")]
+    public float dashCooldown = 3f;
+
+    bool     isDashing;
+    float    dashElapsed;       // time into the current dash (0 → dashDuration)
+    float    dashCooldownTimer;
+    Vector3  dashWorldDir;      // world-space direction captured at launch
+    float    dashTotalDist;     // total distance for the active dash
 
     [Header("State")]
     public GearState currentGear = GearState.Idle;
@@ -67,6 +78,7 @@ public class ShipController : MonoBehaviour
     public float CurrentSpeed  => currentForwardSpeed;
     public float MaxSpeed      => gear3Speed;
     public bool  IsDestroyed   => destroyed;
+    public bool  IsDashing     => isDashing;
 
     /// <summary>
     /// Called by ShipPhysicsBody every frame the hull is in contact with an obstacle.
@@ -166,7 +178,7 @@ public class ShipController : MonoBehaviour
     
     void ApplySailChange()
     {
-        if (sailDelta == 0 || sailsDestroyed || hullDisabled)
+        if (sailDelta == 0 || sailsDestroyed || hullDisabled || isDashing)
             return;
 
         if (sailDelta > 0)
@@ -189,26 +201,51 @@ public class ShipController : MonoBehaviour
     // DASH
     // =====================================================
 
-    public void TryDash()
+    /// <summary>
+    /// Initiates a dash in the requested direction.
+    /// Direction is captured from the ship's current orientation at the moment
+    /// of the call, so it never drifts mid-dash.
+    /// </summary>
+    public void TryDash(DashDirection dir)
     {
         if (isDashing || dashCooldownTimer > 0f || sailsDestroyed || hullDisabled || destroyed)
             return;
 
-        isDashing = true;
-        dashTimer = dashDuration;
+        dashWorldDir  = dir == DashDirection.Forward ? transform.forward
+                      : dir == DashDirection.Left    ? -transform.right
+                      :                                 transform.right;
+
+        dashTotalDist     = dir == DashDirection.Forward ? forwardDashDistance : sideDashDistance;
+        isDashing         = true;
+        dashElapsed       = 0f;
         dashCooldownTimer = dashCooldown;
+
+        // Snap out of any ongoing turn so the ship flies straight through the dash
+        currentRotationSpeed = 0f;
     }
 
     void ApplyDash()
     {
-        if (!isDashing)
-            return;
+        if (!isDashing) return;
 
-        dashTimer -= Time.deltaTime;
-        currentForwardSpeed = dashSpeed;
+        float tPrev    = dashElapsed / dashDuration;
+        dashElapsed   += Time.deltaTime;
 
-        if (dashTimer <= 0f)
-            isDashing = false;
+        if (dashElapsed >= dashDuration)
+        {
+            dashElapsed = dashDuration;
+            isDashing   = false;
+        }
+
+        float tNext = dashElapsed / dashDuration;
+
+        // Ease-out quadratic: position(t) = dist × (1 − (1−t)²)
+        // Frame delta       = dist × ((1−tPrev)² − (1−tNext)²)
+        float a     = 1f - tPrev;
+        float b     = 1f - tNext;
+        float delta = dashTotalDist * (a * a - b * b);
+
+        transform.position += dashWorldDir * delta;
     }
 
     // =====================================================
@@ -231,8 +268,18 @@ public class ShipController : MonoBehaviour
             currentForwardSpeed = Mathf.MoveTowards(currentForwardSpeed, targetSpeed, accel * Time.deltaTime);
         }
 
-        // Forward motion
+        // Forward motion — always applied so momentum carries through a dash
         transform.position += transform.forward * currentForwardSpeed * Time.deltaTime;
+
+        if (isDashing)
+        {
+            // Rotation and lean are frozen for the duration of the dash.
+            // Lean bleeds back to level so the ship looks stable mid-burst.
+            currentLean = Mathf.Lerp(currentLean, 0f, leanSmoothing * Time.deltaTime);
+            Vector3 euler = transform.localEulerAngles;
+            transform.localRotation = Quaternion.Euler(euler.x, euler.y, currentLean);
+            return;
+        }
 
         // Speed-dependent max turn rate: slower = easier to turn, faster = harder
         float speedRatio = Mathf.Clamp01(currentForwardSpeed / gear3Speed);
@@ -252,16 +299,13 @@ public class ShipController : MonoBehaviour
         transform.Rotate(0f, currentRotationSpeed * Time.deltaTime, 0f, Space.World);
 
         // Lean based on how much of max turn rate we're actually using
-        float normalizedTurn = maxTurnRate > 0f ? currentRotationSpeed / maxTurnRate : 0f;
+        float normalizedTurn    = maxTurnRate > 0f ? currentRotationSpeed / maxTurnRate : 0f;
         float steeringIntensity = Mathf.Abs(normalizedTurn);
-        float speedFactor = Mathf.Clamp01(currentForwardSpeed / gear3Speed);
+        float speedFactor       = Mathf.Clamp01(currentForwardSpeed / gear3Speed);
 
-        // More lean at higher speeds when turning
         float targetLean = -normalizedTurn * (leanAmount + turnLeanBonus * steeringIntensity * speedFactor);
-
         currentLean = Mathf.Lerp(currentLean, targetLean, leanSmoothing * Time.deltaTime);
-        
-        // Apply lean as local rotation
+
         Vector3 currentEuler = transform.localEulerAngles;
         transform.localRotation = Quaternion.Euler(currentEuler.x, currentEuler.y, currentLean);
     }
