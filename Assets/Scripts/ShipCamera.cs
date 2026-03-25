@@ -71,6 +71,19 @@ public class ShipCamera : MonoBehaviour
     [Tooltip("How smoothly the camera moves to and from the dock camera point")]
     public float dockCameraSmoothing = 2f;
 
+    [Header("Free Aim Mode")]
+    [Tooltip("FOV when in free-aim mode")]
+    public float freeAimFOV = 55f;
+
+    [Tooltip("Max left/right yaw relative to ship forward (degrees) — prevents aiming backwards)")]
+    public float freeAimMaxYaw   = 90f;
+
+    [Tooltip("Minimum pitch (degrees, negative = down)")]
+    public float freeAimMinPitch = -10f;
+
+    [Tooltip("Maximum pitch (degrees, positive = up)")]
+    public float freeAimMaxPitch =  45f;
+
     [Header("Travel Mode (Gear 3)")]
     [Tooltip("Enable to preview the travel camera in Play mode without being at Gear 3")]
     public bool previewTravelMode = false;
@@ -104,6 +117,8 @@ public class ShipCamera : MonoBehaviour
 
     bool isDocked;
     Transform dockedCameraTarget;
+
+    bool isFreeAiming;
 
     bool isTraveling;
     bool isTransitioningToTravel;
@@ -139,8 +154,13 @@ public class ShipCamera : MonoBehaviour
 
     // Public getters
     public AimSide CurrentAimSide => currentAimSide;
-    public bool IsAiming => isAiming;
-    public bool IsCameraLocked => isAiming;
+    public bool IsAiming      => isAiming;
+    public bool IsFreeAiming  => isFreeAiming;
+    public bool IsCameraLocked => isAiming || isFreeAiming;
+
+    /// <summary>Ship-relative horizontal camera yaw in degrees.
+    /// Positive = looking right, negative = looking left.</summary>
+    public float CameraYaw => cameraRotation.y;
 
     void Awake()
     {
@@ -262,6 +282,30 @@ public class ShipCamera : MonoBehaviour
             return; // world-space rotation: skip ship-relative logic below
         }
 
+        // ── Free Aim mode (ship-relative, clamped hemisphere) ───────────────────
+        if (isFreeAiming)
+        {
+            float mouseX = Input.GetAxis("Mouse X") * lookSensitivity;
+            float mouseY = Input.GetAxis("Mouse Y") * lookSensitivity;
+            if (invertY) mouseY = -mouseY;
+
+            cameraRotation.y += mouseX;
+            cameraRotation.x += mouseY;
+
+            // Clamp to the forward hemisphere — can't look backwards
+            cameraRotation.y = Mathf.Clamp(cameraRotation.y, -freeAimMaxYaw,  freeAimMaxYaw);
+            cameraRotation.x = Mathf.Clamp(cameraRotation.x,  freeAimMinPitch, freeAimMaxPitch);
+
+            // No roll in free aim
+            currentRoll = Mathf.SmoothDampAngle(currentRoll, 0f, ref rollVelocity, 1f / aimSnapSpeed);
+
+            Quaternion targetRot = ship.rotation
+                * Quaternion.Euler(-cameraRotation.x, cameraRotation.y, currentRoll);
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation, targetRot, rotationSmoothing * Time.deltaTime);
+            return;
+        }
+
         // ── Normal / Aim mode (ship-relative) ───────────────────────────────────
         if (!isAiming)
         {
@@ -308,7 +352,7 @@ public class ShipCamera : MonoBehaviour
 
     void DetermineSideFromCamera()
     {
-        if (!isAiming)
+        if (!isAiming || isFreeAiming)
         {
             currentAimSide = AimSide.None;
             return;
@@ -410,7 +454,10 @@ public class ShipCamera : MonoBehaviour
     {
         if (!cam) return;
 
-        float targetFOV = isAiming ? aimFOV : IsInTravelMode ? travelFOV : normalFOV;
+        float targetFOV = isAiming      ? aimFOV
+                        : isFreeAiming  ? freeAimFOV
+                        : IsInTravelMode ? travelFOV
+                        : normalFOV;
         cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, targetFOV, fovSpeed * Time.deltaTime);
     }
 
@@ -439,9 +486,25 @@ public class ShipCamera : MonoBehaviour
 
     public void ExitAimMode()
     {
-        isAiming = false;
+        isAiming       = false;
         currentAimSide = AimSide.None;
-        targetAimSide = AimSide.None;
+        targetAimSide  = AimSide.None;
+    }
+
+    /// <summary>Enters FreeAimMode: camera follows mouse within a clamped hemisphere.</summary>
+    public void EnterFreeAimMode()
+    {
+        isFreeAiming = true;
+
+        // Clamp any existing rotation into the free-aim range immediately
+        cameraRotation.y = Mathf.Clamp(cameraRotation.y, -freeAimMaxYaw,  freeAimMaxYaw);
+        cameraRotation.x = Mathf.Clamp(cameraRotation.x,  freeAimMinPitch, freeAimMaxPitch);
+    }
+
+    /// <summary>Exits FreeAimMode and returns camera to normal free-look.</summary>
+    public void ExitFreeAimMode()
+    {
+        isFreeAiming = false;
     }
     
     Vector3 GetAimOffset(AimSide side)
