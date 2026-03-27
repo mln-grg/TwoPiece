@@ -179,7 +179,7 @@ public class DebugHUD : MonoBehaviour
             CacheHealthComponents();
 
         // ── Measure total panel height ────────────────────────────────────
-        int playerRows = playerShip != null ? 4 : 1;   // gear, speed, hull, sail
+        int playerRows = playerShip != null ? 4 : 1;   // thruster, speed, hull, sail
         int enemyRows  = enemyShip  != null ? 2 : 1;   // hull, sail
         // 2 headers + player rows + section gap row + enemy rows
         int totalRows  = 2 + playerRows + 1 + enemyRows;
@@ -195,7 +195,7 @@ public class DebugHUD : MonoBehaviour
 
         if (playerShip != null)
         {
-            DrawRow (ref cy, "Gear",  GearName(playerShip.currentGear));
+            DrawRow(ref cy, "Thruster", $"{playerShip.ThrusterPercent * 100f:F0}%");
             DrawRow (ref cy, "Speed", $"{playerShip.CurrentSpeed:F1}  /  {playerShip.MaxSpeed:F1} u/s");
             DrawBar (ref cy, "Hull",  _playerHull, hullBarFill, hullBarEmpty);
             DrawBar (ref cy, "Sails", _playerSail, sailBarFill, sailBarEmpty);

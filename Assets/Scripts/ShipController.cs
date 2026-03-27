@@ -1,63 +1,94 @@
 using System.Collections;
 using UnityEngine;
 
+// ── Kept for AI script compilation compatibility ───────────────────────────────
 public enum GearState    { Idle, Gear1, Gear2, Gear3 }
 public enum DashDirection { Forward, Left, Right }
 
+/// <summary>
+/// AC7-style sky ship flight controller.
+///
+/// Speed   — driven by thrusterInput [0-1] (RT / Left Shift).
+///           At zero thrust the ship coasts at minThrusterSpeed; at full thrust
+///           it accelerates to maxThrusterSpeed.
+///
+/// Pitch   — driven by pitchInput [-1..+1] (Left Stick Y, inverted flight
+///           convention: +1 = nose up).  Ship actually climbs / dives in 3-D.
+///
+/// Yaw     — derived from bank/roll (AC7 Standard): steeringInput [-1..+1]
+///           (Left Stick X / A-D) banks the ship; yaw rate scales with bank angle
+///           and is wider at higher speeds (larger turn radius).
+/// </summary>
 public class ShipController : MonoBehaviour
 {
-    public float gear1Speed = 7f;
-    public float gear2Speed = 13f;
-    public float gear3Speed = 20f;
-    
-    public float acceleration = 4.0f;
+    // ── Thruster ──────────────────────────────────────────────────────────────
+    [Header("Thruster")]
+    [Tooltip("Forward speed when thruster is at zero — ship always has minimum momentum")]
+    public float minThrusterSpeed = 5f;
 
-    [Tooltip("Speed units/s lost per second when dropping a gear or going to idle — 25 drops full speed to zero in ~0.8s")]
-    public float gearDownDeceleration = 25f;
+    [Tooltip("Forward speed at full thruster (RT fully pressed)")]
+    public float maxThrusterSpeed = 30f;
 
-    [Header("Steering")]
-    [Tooltip("Max turn rate at zero speed (easiest turning)")]
-    public float lowSpeedTurnRate = 45f;
+    [Tooltip("Units/s² gained per second when applying thrust")]
+    public float thrusterAcceleration = 8f;
 
-    [Tooltip("Max turn rate at full speed (hardest turning)")]
+    [Tooltip("Units/s² lost per second when thrust is cut (RT released)")]
+    public float thrusterDeceleration = 4f;
+
+    // ── Pitch ─────────────────────────────────────────────────────────────────
+    [Header("Pitch (Left Stick Y / W-S)")]
+    [Tooltip("Maximum nose-up / nose-down angle in degrees")]
+    public float maxPitchAngle = 35f;
+
+    [Tooltip("How quickly pitch builds / bleeds — lower = heavier, more inertia")]
+    public float pitchResponseSpeed = 3f;
+
+    [Tooltip("Speed units/s² lost per second at full pitch (climbing costs thrust)")]
+    public float pitchSpeedBleed = 1.5f;
+
+    // ── Steering — Bank / Roll drives Yaw (AC7 Standard) ─────────────────────
+    [Header("Steering (Left Stick X / A-D)")]
+    [Tooltip("Max turn rate at minimum speed (tightest circle)")]
+    public float lowSpeedTurnRate = 50f;
+
+    [Tooltip("Max turn rate at maximum speed (widest arc)")]
     public float highSpeedTurnRate = 18f;
 
-    [Tooltip("How fast rotation speed builds up or bleeds off (deg/s²) — like the steering wheel tightening")]
-    public float turnAcceleration = 72f;
+    [Header("Bank / Roll")]
+    [Tooltip("Maximum bank angle in degrees — this IS the turn input")]
+    public float maxBankAngle = 35f;
 
-    [Header("Ship Lean (Heel)")]
-    public float leanAmount = 12f;
-    public float leanSmoothing = 3f;
-    
-    [Tooltip("Additional lean when turning hard")]
-    public float turnLeanBonus = 8f;
+    [Tooltip("How fast the bank builds and bleeds — lower = heavier feel")]
+    public float bankResponseSpeed = 3.5f;
 
+    [Tooltip("Speed units/s² lost per second at full bank")]
+    public float bankSpeedBleed = 2.5f;
+
+    // ── Dash ──────────────────────────────────────────────────────────────────
     [Header("Dash")]
-    [Tooltip("Distance covered by a forward dash (units).")]
+    [Tooltip("Distance covered by a forward dash (units)")]
     public float forwardDashDistance = 12f;
 
-    [Tooltip("Distance covered by a left/right side dash (units).")]
+    [Tooltip("Distance covered by a left/right side dash (units)")]
     public float sideDashDistance = 7f;
 
-    [Tooltip("Duration of a single dash in seconds — lower = snappier burst.")]
+    [Tooltip("Duration of a single dash in seconds")]
     public float dashDuration = 0.25f;
 
-    [Tooltip("Seconds before another dash is allowed after one finishes.")]
+    [Tooltip("Seconds before another dash is allowed")]
     public float dashCooldown = 3f;
 
-    bool     isDashing;
-    float    dashElapsed;       // time into the current dash (0 → dashDuration)
-    float    dashCooldownTimer;
-    Vector3  dashWorldDir;      // world-space direction captured at launch
-    float    dashTotalDist;     // total distance for the active dash
+    // ── Control Input (set each frame by PlayerShipInput or AI) ───────────────
+    [Header("Control Input")]
+    [Range(-1f, 1f)] public float steeringInput;   // roll / bank → yaw
+    [Range(-1f, 1f)] public float pitchInput;       // +1 = nose up, -1 = nose down
+    [Range( 0f, 1f)] public float thrusterInput;    // 0 = idle coast, 1 = full thrust (RT)
 
-    [Header("State")]
-    public GearState currentGear = GearState.Idle;
+    // ── Legacy fields — kept so AI scripts continue to compile ────────────────
+    [HideInInspector] public GearState currentGear = GearState.Gear1;
+    [HideInInspector] public int sailDelta;
 
-    [Header("Control Input (AI / Player)")]
-    [Range(-1f, 1f)] public float steeringInput;
-    public int sailDelta;
-
+    // ── Health ────────────────────────────────────────────────────────────────
     [Header("Health")]
     public HealthComponent sailHealth;
     public HealthComponent hullHealth;
@@ -66,38 +97,49 @@ public class ShipController : MonoBehaviour
     public float sailDamageToHullRatio = 1f;
 
     public float hullDisableThreshold = 30f;
-    
+
+    // ── Private state ─────────────────────────────────────────────────────────
     float currentForwardSpeed;
-    float currentRotationSpeed;
-    float currentLean;
+    float currentRotationSpeed;  // degrees/sec — derived each frame from bank angle
+    float currentLean;           // current bank angle in degrees (Z-axis)
+    float currentPitch;          // current pitch angle in degrees (X-axis, neg = nose up)
+
+    bool  isDashing;
+    float dashElapsed;
+    float dashCooldownTimer;
+    Vector3 dashWorldDir;
+    float   dashTotalDist;
 
     bool sailsDestroyed;
     bool hullDisabled;
     bool destroyed;
 
-    public float CurrentSpeed  => currentForwardSpeed;
-    public float MaxSpeed      => gear3Speed;
-    public bool  IsDestroyed   => destroyed;
-    public bool  IsDashing     => isDashing;
+    // ── Public read-only properties ───────────────────────────────────────────
+    public float CurrentSpeed      => currentForwardSpeed;
+    public float MaxSpeed          => maxThrusterSpeed;
+    public bool  IsDestroyed       => destroyed;
+    public bool  IsDashing         => isDashing;
+
+    /// <summary>Normalised thruster 0-1. Use for HUD and camera speed effects.</summary>
+    public float ThrusterPercent   => thrusterInput;
+
+    // ── Wall collision ────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Called by ShipPhysicsBody every frame the hull is in contact with an obstacle.
-    /// Zeroes the velocity component going into the wall; the along-wall component
-    /// survives — so you slide but cannot push through.
+    /// Called by ShipPhysicsBody when the hull is in contact with a wall.
+    /// Bleeds the component of velocity going into the wall so the ship slides.
     /// </summary>
     public void ApplyWallSlide(Vector3 wallNormal)
     {
-        // ProjectOnPlane magnitude = sin(angle between forward and wallNormal)
-        //   0 → heading straight into wall → full stop
-        //   1 → heading parallel to wall   → no speed loss
         float slideFactor = Vector3.ProjectOnPlane(transform.forward, wallNormal).magnitude;
         currentForwardSpeed *= slideFactor;
     }
 
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
+
     void Start()
     {
         // Auto-discover health components when Inspector references are not set.
-        // Walks children looking for ShipCollision + HealthComponent pairs.
         if (hullHealth == null || sailHealth == null)
         {
             foreach (ShipCollision sc in GetComponentsInChildren<ShipCollision>())
@@ -117,6 +159,9 @@ public class ShipController : MonoBehaviour
 
         if (sailHealth != null)
             sailHealth.OnDestroyed += OnSailDestroyed;
+
+        // Always start with minimum flight speed — sky ships don't sit still
+        currentForwardSpeed = minThrusterSpeed;
     }
 
     void OnDestroy()
@@ -131,25 +176,22 @@ public class ShipController : MonoBehaviour
             sailHealth.OnDestroyed -= OnSailDestroyed;
     }
 
-    // ── Health handlers ────────────────────────────────────────────────────
+    // ── Health handlers ────────────────────────────────────────────────────────
 
     void OnHullDamaged(DamageInfo info)
     {
-        // Cross the disable threshold: ship becomes sluggish and can't change gear
         if (!hullDisabled && hullHealth.currentHealth <= hullDisableThreshold)
             hullDisabled = true;
     }
 
     void OnHullDestroyed()
     {
-        // Ship is dead — stop it immediately and destroy after 5 seconds
         destroyed = true;
         StartCoroutine(DestroyShipAfterDelay(5f));
     }
 
     void OnSailDestroyed()
     {
-        // No sails — locked to idle, cannot move under own power
         sailsDestroyed = true;
     }
 
@@ -159,68 +201,34 @@ public class ShipController : MonoBehaviour
         Destroy(gameObject);
     }
 
-    // ───────────────────────────────────────────────────────────────────────
+    // ── Update ────────────────────────────────────────────────────────────────
 
     void Update()
     {
         dashCooldownTimer -= Time.deltaTime;
-
-        ApplySailChange();
         ApplyDash();
         ApplyMovement();
     }
-    
-    
-    // =====================================================
-    // SAIL STATE
-    // =====================================================
-    
-    
-    void ApplySailChange()
-    {
-        if (sailDelta == 0 || sailsDestroyed || hullDisabled || isDashing)
-            return;
 
-        if (sailDelta > 0)
-        {
-            if      (currentGear == GearState.Idle)  currentGear = GearState.Gear1;
-            else if (currentGear == GearState.Gear1) currentGear = GearState.Gear2;
-            else if (currentGear == GearState.Gear2) currentGear = GearState.Gear3;
-        }
-        else
-        {
-            if      (currentGear == GearState.Gear3) currentGear = GearState.Gear2;
-            else if (currentGear == GearState.Gear2) currentGear = GearState.Gear1;
-            else if (currentGear == GearState.Gear1) currentGear = GearState.Idle;
-        }
-
-        sailDelta = 0;
-    }
-
-    // =====================================================
+    // =========================================================================
     // DASH
-    // =====================================================
+    // =========================================================================
 
-    /// <summary>
-    /// Initiates a dash in the requested direction.
-    /// Direction is captured from the ship's current orientation at the moment
-    /// of the call, so it never drifts mid-dash.
-    /// </summary>
     public void TryDash(DashDirection dir)
     {
         if (isDashing || dashCooldownTimer > 0f || sailsDestroyed || hullDisabled || destroyed)
             return;
 
-        dashWorldDir  = dir == DashDirection.Forward ? transform.forward
-                      : dir == DashDirection.Left    ? -transform.right
-                      :                                 transform.right;
+        dashWorldDir = dir == DashDirection.Forward ? transform.forward
+                     : dir == DashDirection.Left    ? -transform.right
+                     :                                 transform.right;
 
         dashTotalDist     = dir == DashDirection.Forward ? forwardDashDistance : sideDashDistance;
         isDashing         = true;
         dashElapsed       = 0f;
         dashCooldownTimer = dashCooldown;
 
-        // Snap out of any ongoing turn so the ship flies straight through the dash
+        // Snap rotation speed so the ship flies straight through the dash
         currentRotationSpeed = 0f;
     }
 
@@ -228,8 +236,8 @@ public class ShipController : MonoBehaviour
     {
         if (!isDashing) return;
 
-        float tPrev    = dashElapsed / dashDuration;
-        dashElapsed   += Time.deltaTime;
+        float tPrev  = dashElapsed / dashDuration;
+        dashElapsed += Time.deltaTime;
 
         if (dashElapsed >= dashDuration)
         {
@@ -240,7 +248,6 @@ public class ShipController : MonoBehaviour
         float tNext = dashElapsed / dashDuration;
 
         // Ease-out quadratic: position(t) = dist × (1 − (1−t)²)
-        // Frame delta       = dist × ((1−tPrev)² − (1−tNext)²)
         float a     = 1f - tPrev;
         float b     = 1f - tNext;
         float delta = dashTotalDist * (a * a - b * b);
@@ -248,65 +255,79 @@ public class ShipController : MonoBehaviour
         transform.position += dashWorldDir * delta;
     }
 
-    // =====================================================
-    // MOVEMENT & STEERING
-    // =====================================================
-
+    // =========================================================================
+    // MOVEMENT — Thruster · Pitch · Bank-driven Yaw
+    // =========================================================================
 
     void ApplyMovement()
     {
-        float targetSpeed =
-            sailsDestroyed || hullDisabled ? 0f :
-            currentGear == GearState.Gear3 ? gear3Speed :
-            currentGear == GearState.Gear2 ? gear2Speed :
-            currentGear == GearState.Gear1 ? gear1Speed :
-            0f;
+        if (destroyed) return;
+
+        // ── Thruster speed ────────────────────────────────────────────────────
+        // Dead engines: bleed to zero.  Otherwise: RT maps 0→min, 1→max speed.
+        float targetSpeed = (sailsDestroyed || hullDisabled)
+            ? 0f
+            : Mathf.Lerp(minThrusterSpeed, maxThrusterSpeed, thrusterInput);
 
         if (!isDashing)
         {
-            float accel = targetSpeed > currentForwardSpeed ? acceleration : gearDownDeceleration;
+            float accel = targetSpeed > currentForwardSpeed ? thrusterAcceleration : thrusterDeceleration;
             currentForwardSpeed = Mathf.MoveTowards(currentForwardSpeed, targetSpeed, accel * Time.deltaTime);
         }
 
-        // Forward motion — always applied so momentum carries through a dash
+        // Move forward — transform.forward now includes pitch, so the ship
+        // genuinely climbs/dives in world space.
         transform.position += transform.forward * currentForwardSpeed * Time.deltaTime;
 
+        // ── Dash stabilisation ────────────────────────────────────────────────
         if (isDashing)
         {
-            // Rotation and lean are frozen for the duration of the dash.
-            // Lean bleeds back to level so the ship looks stable mid-burst.
-            currentLean = Mathf.Lerp(currentLean, 0f, leanSmoothing * Time.deltaTime);
-            Vector3 euler = transform.localEulerAngles;
-            transform.localRotation = Quaternion.Euler(euler.x, euler.y, currentLean);
+            // Level bank and pitch visually during a dash burst
+            currentLean  = Mathf.Lerp(currentLean,  0f, bankResponseSpeed  * Time.deltaTime);
+            currentPitch = Mathf.Lerp(currentPitch, 0f, pitchResponseSpeed * Time.deltaTime);
+            ApplyRotation();
             return;
         }
 
-        // Speed-dependent max turn rate: slower = easier to turn, faster = harder
-        float speedRatio = Mathf.Clamp01(currentForwardSpeed / gear3Speed);
-        float maxTurnRate = Mathf.Lerp(lowSpeedTurnRate, highSpeedTurnRate, speedRatio);
+        // ── Pitch (nose up / down) ────────────────────────────────────────────
+        // Unity X euler: negative = nose up.  pitchInput +1 = nose up → targetPitch negative.
+        float targetPitch = -pitchInput * maxPitchAngle;
+        currentPitch = Mathf.Lerp(currentPitch, targetPitch, pitchResponseSpeed * Time.deltaTime);
 
-        // Target rotation speed from input — zero input bleeds rotation back to zero
-        float targetRotationSpeed = steeringInput * maxTurnRate;
+        // ── Bank / Roll → Yaw (AC7 Standard) ─────────────────────────────────
+        float targetLean = -steeringInput * maxBankAngle;
+        currentLean = Mathf.Lerp(currentLean, targetLean, bankResponseSpeed * Time.deltaTime);
 
-        // Accelerate toward target; reversing direction forces current speed through zero first,
-        // naturally producing the "startup lag" and "longer in acceleration on reversal" feel
-        currentRotationSpeed = Mathf.MoveTowards(
-            currentRotationSpeed,
-            targetRotationSpeed,
-            turnAcceleration * Time.deltaTime
-        );
+        // Wider turn arc at higher speeds (mirrors AC7's speed-radius relationship)
+        float speedRatio     = Mathf.Clamp01(currentForwardSpeed / maxThrusterSpeed);
+        float maxTurnRate    = Mathf.Lerp(lowSpeedTurnRate, highSpeedTurnRate, speedRatio);
+        float bankRatio      = currentLean / -maxBankAngle;  // -1..+1
+        currentRotationSpeed = bankRatio * maxTurnRate;
 
+        // Yaw is applied in world space so pitch/bank don't pollute heading
         transform.Rotate(0f, currentRotationSpeed * Time.deltaTime, 0f, Space.World);
 
-        // Lean based on how much of max turn rate we're actually using
-        float normalizedTurn    = maxTurnRate > 0f ? currentRotationSpeed / maxTurnRate : 0f;
-        float steeringIntensity = Mathf.Abs(normalizedTurn);
-        float speedFactor       = Mathf.Clamp01(currentForwardSpeed / gear3Speed);
+        // ── Speed bleed from hard manoeuvres ──────────────────────────────────
+        // Only bleed above minimum; MoveTowards will recover next frame if thrust is on.
+        if (currentForwardSpeed > minThrusterSpeed)
+        {
+            float bleed = (Mathf.Abs(bankRatio)   * bankSpeedBleed
+                         + Mathf.Abs(pitchInput)  * pitchSpeedBleed)
+                         * Time.deltaTime;
 
-        float targetLean = -normalizedTurn * (leanAmount + turnLeanBonus * steeringIntensity * speedFactor);
-        currentLean = Mathf.Lerp(currentLean, targetLean, leanSmoothing * Time.deltaTime);
+            currentForwardSpeed = Mathf.Max(currentForwardSpeed - bleed, minThrusterSpeed);
+        }
 
-        Vector3 currentEuler = transform.localEulerAngles;
-        transform.localRotation = Quaternion.Euler(currentEuler.x, currentEuler.y, currentLean);
+        ApplyRotation();
+    }
+
+    /// <summary>
+    /// Writes the final world rotation by preserving the current world yaw (already
+    /// updated this frame by Rotate) and overlaying our controlled pitch and bank.
+    /// </summary>
+    void ApplyRotation()
+    {
+        Vector3 euler = transform.localEulerAngles;
+        transform.localRotation = Quaternion.Euler(currentPitch, euler.y, currentLean);
     }
 }

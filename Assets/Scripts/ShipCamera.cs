@@ -71,6 +71,10 @@ public class ShipCamera : MonoBehaviour
     [Tooltip("How smoothly the camera moves to and from the dock camera point")]
     public float dockCameraSmoothing = 2f;
 
+    [Header("Controller Look")]
+    [Tooltip("Right-stick look sensitivity (degrees/s per unit of axis input)")]
+    public float controllerSensitivity = 150f;
+
     [Header("Free Aim Mode")]
     [Tooltip("FOV when in free-aim mode")]
     public float freeAimFOV = 55f;
@@ -285,8 +289,10 @@ public class ShipCamera : MonoBehaviour
         // ── Free Aim mode (ship-relative, clamped hemisphere) ───────────────────
         if (isFreeAiming)
         {
-            float mouseX = Input.GetAxis("Mouse X") * lookSensitivity;
-            float mouseY = Input.GetAxis("Mouse Y") * lookSensitivity;
+            float mouseX = Input.GetAxis("Mouse X") * lookSensitivity
+                         + Input.GetAxis("RightStickX") * controllerSensitivity * Time.deltaTime;
+            float mouseY = Input.GetAxis("Mouse Y") * lookSensitivity
+                         + Input.GetAxis("RightStickY") * controllerSensitivity * Time.deltaTime;
             if (invertY) mouseY = -mouseY;
 
             cameraRotation.y += mouseX;
@@ -309,8 +315,10 @@ public class ShipCamera : MonoBehaviour
         // ── Normal / Aim mode (ship-relative) ───────────────────────────────────
         if (!isAiming)
         {
-            float mouseX = Input.GetAxis("Mouse X") * lookSensitivity;
-            float mouseY = Input.GetAxis("Mouse Y") * lookSensitivity;
+            float mouseX = Input.GetAxis("Mouse X") * lookSensitivity
+                         + Input.GetAxis("RightStickX") * controllerSensitivity * Time.deltaTime;
+            float mouseY = Input.GetAxis("Mouse Y") * lookSensitivity
+                         + Input.GetAxis("RightStickY") * controllerSensitivity * Time.deltaTime;
             if (invertY) mouseY = -mouseY;
 
             cameraRotation.x += mouseY;
