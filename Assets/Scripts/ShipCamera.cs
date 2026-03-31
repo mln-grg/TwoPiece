@@ -110,9 +110,13 @@ public class ShipCamera : MonoBehaviour
     [Tooltip("How lazily the travel camera's yaw drifts to follow the ship heading (SmoothDamp time — higher = more lag, more Pirates! feel)")]
     public float travelYawLagTime = 1.2f;
 
+    [Tooltip("How fast the camera blends between normal and travel mode as throttle changes")]
+    public float travelBlendSpeed = 3f;
+
     public enum AimSide { None, Left, Right, Front, Back }
 
     Camera cam;
+    ShipController _shipController;
     Vector3 currentVelocity;
     Vector2 cameraRotation;
     float currentRoll;
@@ -124,11 +128,9 @@ public class ShipCamera : MonoBehaviour
 
     bool isFreeAiming;
 
-    bool isTraveling;
-    bool isTransitioningToTravel;
-    bool isTransitioningFromTravel;
-    bool wasInTravelMode;
-    float transitionTimer;
+    // Travel blend: 0 = full normal camera, 1 = full travel camera.
+    // Driven continuously by ShipController.ThrusterPercent each frame.
+    float _travelBlend;
 
     // SmoothDamp velocity state for rotation
     float travelWorldYaw;           // world-space yaw the travel camera currently faces
@@ -154,7 +156,7 @@ public class ShipCamera : MonoBehaviour
         _shakeIntensity = Mathf.Max(_shakeIntensity, Mathf.Clamp01(force));
     }
 
-    bool IsInTravelMode => isTraveling || previewTravelMode;
+    bool IsInTravelMode => _travelBlend > 0.01f || previewTravelMode;
 
     // Public getters
     public AimSide CurrentAimSide => currentAimSide;
@@ -169,9 +171,16 @@ public class ShipCamera : MonoBehaviour
     void Awake()
     {
         cam = GetComponent<Camera>();
-        
         if (!cam)
             cam = Camera.main;
+    }
+
+    void Start()
+    {
+        if (ship)
+            _shipController = ship.GetComponent<ShipController>();
+        if (ship)
+            travelWorldYaw = ship.eulerAngles.y;
     }
 
     void LateUpdate()
@@ -179,32 +188,20 @@ public class ShipCamera : MonoBehaviour
         if (!ship)
             return;
 
-        // Detect travel mode edge (handles both EnterTravelMode() and previewTravelMode toggle)
-        bool nowTraveling = IsInTravelMode;
-        if (nowTraveling && !wasInTravelMode)
-        {
-            isTransitioningToTravel   = true;
-            isTransitioningFromTravel = false;
-            transitionTimer           = travelTransitionTime;
-        }
-        else if (!nowTraveling && wasInTravelMode)
-        {
-            isTransitioningToTravel   = false;
-            isTransitioningFromTravel = true;
-            transitionTimer           = travelTransitionTime;
-        }
-        wasInTravelMode = nowTraveling;
+        // Lazy-cache the ShipController if it wasn't found in Start
+        if (_shipController == null && ship)
+            _shipController = ship.GetComponent<ShipController>();
 
-        // Count down and unlock when timer expires
-        if (isTransitioningToTravel || isTransitioningFromTravel)
-        {
-            transitionTimer -= Time.deltaTime;
-            if (transitionTimer <= 0f)
-            {
-                isTransitioningToTravel   = false;
-                isTransitioningFromTravel = false;
-            }
-        }
+        // Drive travel blend from thruster — RT fully held = full travel camera overhead.
+        // previewTravelMode (Inspector toggle) forces blend to 1 for editor preview.
+        float thrusterT = _shipController ? _shipController.ThrusterPercent : 0f;
+        float blendTarget = previewTravelMode ? 1f : thrusterT;
+        _travelBlend = Mathf.Lerp(_travelBlend, blendTarget, travelBlendSpeed * Time.deltaTime);
+
+        // Always keep the lagged travel-yaw tracking the ship so blending in/out is seamless.
+        travelWorldYaw = Mathf.SmoothDampAngle(
+            travelWorldYaw, ship.eulerAngles.y,
+            ref travelWorldYawVelocity, travelYawLagTime);
 
         if (isDocked && dockedCameraTarget)
         {
@@ -249,42 +246,23 @@ public class ShipCamera : MonoBehaviour
         currentVelocity = Vector3.zero;
     }
 
-    public void EnterTravelMode()
-    {
-        isTraveling = true;
-        // Seed world yaw to ship heading so we start aligned; the lag will
-        // let the camera fall behind naturally as soon as the ship turns.
-        if (ship) travelWorldYaw = ship.eulerAngles.y;
-        travelWorldYawVelocity = 0f;
-    }
+    /// <summary>Legacy stub — travel mode is now driven by ShipController.ThrusterPercent.</summary>
+    public void EnterTravelMode() { }
 
-    public void ExitTravelMode()
-    {
-        isTraveling = false;
-        // Sync back to ship-relative offset so normal camera has no sudden jump.
-        // DeltaAngle gives the signed difference: how far camera yaw sits from
-        // ship forward — which is exactly what cameraRotation.y means.
-        if (ship) cameraRotation.y = Mathf.DeltaAngle(ship.eulerAngles.y, travelWorldYaw);
-        cameraRotation.x = 0f;
-    }
+    /// <summary>Legacy stub — travel mode is now driven by ShipController.ThrusterPercent.</summary>
+    public void ExitTravelMode() { }
 
     void UpdateCameraRotation()
     {
-        // ── Travel mode: world-space yaw that lazily drifts behind the ship ────
-        // The camera does NOT lock to ship rotation — instead it tracks ship heading
-        // with a configurable lag, producing the Sid Meier's Pirates! feel where
-        // the ship swings ahead while the camera smoothly catches up.
-        if (IsInTravelMode)
+        // While throttle is up, gently re-centre the free-look angle so the camera
+        // doesn't snap awkwardly when the player cuts thrust.
+        if (_travelBlend > 0.05f && !isAiming && !isFreeAiming)
         {
-            travelWorldYaw = Mathf.SmoothDampAngle(
-                travelWorldYaw, ship.eulerAngles.y,
-                ref travelWorldYawVelocity, travelYawLagTime);
-
-            Quaternion targetRot = Quaternion.Euler(travelPitch, travelWorldYaw, 0f);
-            transform.rotation = Quaternion.Slerp(
-                transform.rotation, targetRot, rotationSmoothing * Time.deltaTime);
-            return; // world-space rotation: skip ship-relative logic below
+            float recenter = Mathf.Clamp01((_travelBlend - 0.05f) / 0.45f) * 4f;
+            cameraRotation.y = Mathf.Lerp(cameraRotation.y, 0f, recenter * Time.deltaTime);
+            cameraRotation.x = Mathf.Lerp(cameraRotation.x, 0f, recenter * Time.deltaTime);
         }
+        // (travel world-yaw is now updated every LateUpdate, above)
 
         // ── Free Aim mode (ship-relative, clamped hemisphere) ───────────────────
         if (isFreeAiming)
@@ -354,7 +332,13 @@ public class ShipCamera : MonoBehaviour
 
         currentRoll = Mathf.SmoothDampAngle(currentRoll, targetRoll, ref rollVelocity, 1f / aimSnapSpeed);
 
-        Quaternion targetRotation = ship.rotation * Quaternion.Euler(-cameraRotation.x, cameraRotation.y, currentRoll);
+        // Build both rotations and blend between them based on thrust amount.
+        // In aim mode the travel blend is fully suppressed — the broadside snap wins.
+        Quaternion normalRot = ship.rotation * Quaternion.Euler(-cameraRotation.x, cameraRotation.y, currentRoll);
+        Quaternion travelRot = Quaternion.Euler(travelPitch, travelWorldYaw + travelYaw, 0f);
+
+        float activeBlend    = isAiming ? 0f : _travelBlend;
+        Quaternion targetRotation = Quaternion.Slerp(normalRot, travelRot, activeBlend);
         transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSmoothing * Time.deltaTime);
     }
 
@@ -411,40 +395,30 @@ public class ShipCamera : MonoBehaviour
     void UpdateCameraPosition()
     {
         Vector3 targetPos;
-        float smoothTime;
+        float smoothTime = 1f / positionSmoothing;
 
         if (isAiming)
         {
             targetPos  = ship.TransformPoint(GetAimOffset(currentAimSide));
             smoothTime = 1f / (positionSmoothing * 1.5f);
         }
-        else if (IsInTravelMode)
-        {
-            // Offset is applied in world space, rotated by the lagged travel yaw.
-            // This means the camera sits behind-and-above from ITS own perspective,
-            // not the ship's — so it keeps drifting even while the ship turns away.
-            Vector3 worldOffset = Quaternion.Euler(0f, travelWorldYaw, 0f) * travelOffset;
-            targetPos  = ship.position + worldOffset;
-            smoothTime = (isTransitioningToTravel || isTransitioningFromTravel)
-                         ? travelTransitionTime
-                         : 1f / positionSmoothing;
-        }
         else
         {
+            // Normal camera position (optionally pushed back at speed)
             Vector3 offset = normalOffset;
-            if (dynamicCamera)
+            if (dynamicCamera && _shipController)
             {
-                ShipController shipController = ship.GetComponent<ShipController>();
-                if (shipController)
-                {
-                    float speedRatio = shipController.CurrentSpeed / shipController.MaxSpeed;
-                    offset.z -= speedRatio * speedOffsetMultiplier;
-                }
+                float speedRatio = _shipController.CurrentSpeed / _shipController.MaxSpeed;
+                offset.z -= speedRatio * speedOffsetMultiplier;
             }
-            targetPos  = ship.TransformPoint(offset);
-            smoothTime = (isTransitioningToTravel || isTransitioningFromTravel)
-                         ? travelTransitionTime
-                         : 1f / positionSmoothing;
+            Vector3 normalPos = ship.TransformPoint(offset);
+
+            // Travel camera position — world-space offset rotated by the lagged yaw
+            Vector3 worldOffset = Quaternion.Euler(0f, travelWorldYaw + travelYaw, 0f) * travelOffset;
+            Vector3 travelPos   = ship.position + worldOffset;
+
+            // Blend continuously based on how much thrust is applied
+            targetPos = Vector3.Lerp(normalPos, travelPos, _travelBlend);
         }
 
         transform.position = Vector3.SmoothDamp(
@@ -462,10 +436,10 @@ public class ShipCamera : MonoBehaviour
     {
         if (!cam) return;
 
-        float targetFOV = isAiming      ? aimFOV
-                        : isFreeAiming  ? freeAimFOV
-                        : IsInTravelMode ? travelFOV
-                        : normalFOV;
+        float baseFOV   = Mathf.Lerp(normalFOV, travelFOV, _travelBlend);
+        float targetFOV = isAiming     ? aimFOV
+                        : isFreeAiming ? freeAimFOV
+                        : baseFOV;
         cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, targetFOV, fovSpeed * Time.deltaTime);
     }
 

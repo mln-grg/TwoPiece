@@ -4,21 +4,27 @@ using UnityEngine;
 /// Attach to any dock GameObject. Place a child transform and assign it to
 /// "Dock Point" — this is where the player ship will be pulled to.
 ///
+/// Docking input:
+///   Controller — hold X (JoystickButton0) while inside detection range.
+///   Keyboard   — hold E while inside detection range.
+///
+/// An in-game ring drawn with a LineRenderer shows the detection radius
+/// at all times. It pulses gold when the player is close enough to dock.
+///
 /// Setup:
 ///   1. Add this script to your dock/island/port object.
 ///   2. Create a child GameObject (e.g. "DockPoint"), position + rotate it
 ///      where you want the ship to rest, and assign it to Dock Point.
-///   3. Make sure the player ship GameObject has the tag "Player".
+///   3. Make sure the player ship has the tag "Player".
 /// </summary>
 public class DockingStation : MonoBehaviour
 {
     [Header("Dock Point")]
     [Tooltip("Child transform that defines where the ship parks when docked. " +
-             "Its forward direction should point the same way the docked ship faces.")]
+             "Its forward direction should match the docked ship's facing.")]
     public Transform dockPoint;
 
-    [Tooltip("Child transform the camera moves to when docked. Position and rotate it " +
-             "to frame the scene the way you want. Leave empty to skip camera override.")]
+    [Tooltip("Child transform the camera moves to when docked. Leave empty to skip.")]
     public Transform dockedCameraPoint;
 
     [Header("Detection")]
@@ -29,51 +35,123 @@ public class DockingStation : MonoBehaviour
     [Tooltip("How fast (units/sec) the ship moves toward the dock point.")]
     public float moveSpeed = 5f;
 
-    [Tooltip("How fast (degrees/sec) the ship rotates toward the dock orientation.")]
+    [Tooltip("How fast (deg/sec) the ship rotates toward the dock orientation.")]
     public float rotateSpeed = 60f;
 
     [Tooltip("Distance at which the ship snaps into the exact docked position.")]
     public float snapDistance = 0.3f;
 
     [Header("Interaction")]
-    [Tooltip("Seconds the player must hold E before docking begins. Set to 0 for instant.")]
+    [Tooltip("Seconds the player must hold the dock button before docking begins.")]
     public float holdDuration = 1.5f;
 
     [Header("Player")]
-    [Tooltip("Tag on the player ship GameObject.")]
     public string playerTag = "Player";
 
-    // ---- cached player references ----
+    // ── Radius ring visualisation ──────────────────────────────────────────────
+    [Header("Radius Ring")]
+    [Tooltip("Number of line segments used to draw the circle — higher = smoother.")]
+    public int ringSegments = 64;
+
+    [Tooltip("Width of the ring line in world units.")]
+    public float ringWidth = 0.25f;
+
+    [Tooltip("Height offset of the ring above this transform's position (local Y).")]
+    public float ringHeightOffset = 0.5f;
+
+    [Tooltip("Ring colour when no player is nearby.")]
+    public Color ringColorIdle = new Color(0.20f, 1.00f, 0.50f, 0.30f);
+
+    [Tooltip("Ring colour (base) when the player is inside the detection range.")]
+    public Color ringColorNear = new Color(1.00f, 0.80f, 0.20f, 0.85f);
+
+    [Tooltip("Ring pulse speed (oscillations per second) when player is near.")]
+    public float ringPulseSpeed = 2f;
+
+    // ── Cached player references ───────────────────────────────────────────────
     Transform       playerTransform;
     ShipController  shipController;
     PlayerShipInput playerInput;
     ShipCamera      shipCamera;
-    MonoBehaviour   floatingBoat;   // FloatingBoat — fetched by name to avoid hard dependency
+    MonoBehaviour   floatingBoat;
 
-    // ---- state machine ----
+    // ── State machine ──────────────────────────────────────────────────────────
     enum DockState { Sailing, NearDock, Docked }
     DockState state = DockState.Sailing;
 
     float      holdTimer;
-    float      undockCooldown;      // prevents E-press on undock from immediately re-triggering dock
-    bool       holdActive;          // true while player is actively holding E toward this dock
-    Vector3    dockStartPosition;   // ship position when hold began
-    Quaternion dockStartRotation;   // ship rotation when hold began (with lean)
-    Quaternion dockedRotation;      // yaw-only rotation locked in when hold begins
+    float      undockCooldown;
+    bool       holdActive;
+    Vector3    dockStartPosition;
+    Quaternion dockStartRotation;
+    Quaternion dockedRotation;
 
-    // ---- cached GUI resources (built once) ----
+    // ── LineRenderer ring ──────────────────────────────────────────────────────
+    LineRenderer _ring;
+
+    // ── GUI resources ──────────────────────────────────────────────────────────
     GUIStyle  promptStyle;
     Texture2D barBgTex;
     Texture2D barFillTex;
 
-    // =============================================================
+    // ==========================================================================
 
     void Start()
     {
         if (!dockPoint)
-            Debug.LogWarning($"[DockingStation] No DockPoint assigned on '{gameObject.name}'. " +
-                             "Create a child GameObject, position it, and assign it to Dock Point.", this);
+            Debug.LogWarning($"[DockingStation] No DockPoint assigned on '{gameObject.name}'.", this);
+
+        BuildRing();
     }
+
+    // ── Ring ───────────────────────────────────────────────────────────────────
+
+    void BuildRing()
+    {
+        // Create a dedicated child GameObject so the ring can be positioned cleanly.
+        var ringGO = new GameObject("_DockingRing");
+        ringGO.transform.SetParent(transform, worldPositionStays: false);
+        ringGO.transform.localPosition = new Vector3(0f, ringHeightOffset, 0f);
+        ringGO.transform.localRotation = Quaternion.identity;
+
+        _ring = ringGO.AddComponent<LineRenderer>();
+        _ring.useWorldSpace    = false;
+        _ring.loop             = true;
+        _ring.startWidth       = ringWidth;
+        _ring.endWidth         = ringWidth;
+        _ring.positionCount    = ringSegments;
+        _ring.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        _ring.receiveShadows   = false;
+
+        // Use a simple unlit material — no special assets required.
+        var mat = new Material(Shader.Find("Sprites/Default"));
+        mat.renderQueue = 3000; // transparent queue
+        _ring.material  = mat;
+
+        // Place circle points in local space.
+        float step = 2f * Mathf.PI / ringSegments;
+        for (int i = 0; i < ringSegments; i++)
+        {
+            float angle = i * step;
+            _ring.SetPosition(i, new Vector3(
+                Mathf.Cos(angle) * detectionRange,
+                0f,
+                Mathf.Sin(angle) * detectionRange));
+        }
+
+        SetRingColor(ringColorIdle);
+    }
+
+    void SetRingColor(Color c)
+    {
+        if (!_ring) return;
+        _ring.startColor = c;
+        _ring.endColor   = c;
+    }
+
+    // ==========================================================================
+    // MAIN UPDATE
+    // ==========================================================================
 
     void Update()
     {
@@ -81,7 +159,10 @@ public class DockingStation : MonoBehaviour
             FindPlayer();
 
         if (!playerTransform || !dockPoint)
+        {
+            SetRingColor(ringColorIdle);
             return;
+        }
 
         switch (state)
         {
@@ -91,18 +172,18 @@ public class DockingStation : MonoBehaviour
                 break;
 
             case DockState.Docked:
-                // Pin ship to dock point every frame so moving it in the editor
-                // during runtime immediately previews the new position.
                 playerTransform.position = dockPoint.position;
-                if (Input.GetKeyDown(KeyCode.E))
+                // Undock: same button used to dock (X / E)
+                if (Input.GetKeyDown(KeyCode.JoystickButton0) || Input.GetKeyDown(KeyCode.E))
                     Undock();
+                SetRingColor(ringColorIdle);
                 break;
         }
     }
 
-    // =============================================================
+    // ==========================================================================
     // PROXIMITY & HOLD INPUT
-    // =============================================================
+    // ==========================================================================
 
     void UpdateProximity()
     {
@@ -114,22 +195,33 @@ public class DockingStation : MonoBehaviour
             holdTimer      = 0f;
             undockCooldown = 0f;
             if (holdActive) CancelHold();
+            SetRingColor(ringColorIdle);
             return;
         }
 
+        // ── Player is within range ─────────────────────────────────────────────
         state = DockState.NearDock;
-
         undockCooldown = Mathf.Max(0f, undockCooldown - Time.deltaTime);
 
-        if (Input.GetKey(KeyCode.E) && undockCooldown <= 0f)
+        // Pulse the ring colour to draw attention
+        float pulse    = 0.5f + 0.5f * Mathf.Sin(Time.time * ringPulseSpeed * Mathf.PI * 2f);
+        Color nearPulse = Color.Lerp(
+            ringColorNear,
+            new Color(ringColorNear.r, ringColorNear.g, ringColorNear.b, 1f),
+            pulse);
+        SetRingColor(nearPulse);
+
+        // Dock input: X (JoystickButton0) or E key
+        bool dockHeld = undockCooldown <= 0f &&
+                        (Input.GetKey(KeyCode.JoystickButton0) || Input.GetKey(KeyCode.E));
+
+        if (dockHeld)
         {
-            // First frame of holding — lock in start state and disable ship controls
             if (!holdActive)
                 StartHold();
 
             holdTimer += Time.deltaTime;
 
-            // Lerp ship from where it was when the hold started toward the dock point
             float t = holdDuration > 0f ? Mathf.Clamp01(holdTimer / holdDuration) : 1f;
             playerTransform.position = Vector3.Lerp(dockStartPosition, dockPoint.position, t);
             playerTransform.rotation = Quaternion.Lerp(dockStartRotation, dockedRotation, t);
@@ -144,26 +236,24 @@ public class DockingStation : MonoBehaviour
         }
     }
 
-    // =============================================================
+    // ==========================================================================
     // DOCKING
-    // =============================================================
+    // ==========================================================================
 
     void StartHold()
     {
         holdActive = true;
 
-        // Snapshot where the ship is and what heading it has right now
         dockStartPosition = playerTransform.position;
         dockStartRotation = playerTransform.rotation;
+        dockedRotation    = Quaternion.Euler(0f, playerTransform.eulerAngles.y, 0f);
 
-        // Yaw-only target rotation so the ship levels out lean/pitch as it slides in
-        dockedRotation = Quaternion.Euler(0f, playerTransform.eulerAngles.y, 0f);
-
-        // Neutralise ship so it doesn't fight the lerp
         if (shipController)
         {
             shipController.steeringInput = 0f;
-            shipController.currentGear   = GearState.Idle;
+            shipController.thrusterInput = 0f;
+            shipController.brakeInput    = 0f;
+            shipController.currentGear   = GearState.Idle; // kept for legacy compat
         }
 
         if (playerInput)    playerInput.enabled    = false;
@@ -186,21 +276,20 @@ public class DockingStation : MonoBehaviour
         holdTimer  = 0f;
         state      = DockState.Docked;
 
-        // Hard-snap to exact dock position (lerp should be at t=1 already)
         playerTransform.SetPositionAndRotation(dockPoint.position, dockedRotation);
 
         if (shipCamera && dockedCameraPoint)
             shipCamera.EnterDockedView(dockedCameraPoint);
     }
 
-    // =============================================================
+    // ==========================================================================
     // UNDOCKING
-    // =============================================================
+    // ==========================================================================
 
     void Undock()
     {
         state          = DockState.Sailing;
-        undockCooldown = 0.4f;  // block dock input briefly so the same keypress doesn't re-trigger
+        undockCooldown = 0.4f;
         holdActive     = false;
         holdTimer      = 0f;
 
@@ -211,9 +300,9 @@ public class DockingStation : MonoBehaviour
         if (floatingBoat)   floatingBoat.enabled    = true;
     }
 
-    // =============================================================
+    // ==========================================================================
     // PLAYER DISCOVERY
-    // =============================================================
+    // ==========================================================================
 
     void FindPlayer()
     {
@@ -225,15 +314,14 @@ public class DockingStation : MonoBehaviour
         playerInput     = go.GetComponent<PlayerShipInput>();
         floatingBoat    = go.GetComponent("FloatingBoat") as MonoBehaviour;
 
-        // Try to get camera from PlayerShipInput first, then fall back to scene search
         shipCamera = playerInput ? playerInput.shipCamera : null;
         if (!shipCamera)
             shipCamera = Object.FindObjectOfType<ShipCamera>();
     }
 
-    // =============================================================
-    // ON-SCREEN PROMPT (works without a Canvas — uses legacy OnGUI)
-    // =============================================================
+    // ==========================================================================
+    // ON-SCREEN PROMPT
+    // ==========================================================================
 
     void OnGUI()
     {
@@ -242,46 +330,40 @@ public class DockingStation : MonoBehaviour
 
         EnsureGUIResources();
 
-        const float barW    = 300f;
-        const float barH    = 14f;
-        const float labelH  = 34f;
-        const float padding = 6f;
+        const float barW   = 300f;
+        const float barH   = 14f;
+        const float labelH = 34f;
+        const float pad    = 6f;
 
-        float centerX = (Screen.width  - barW) * 0.5f;
-        float baseY   =  Screen.height * 0.75f;
+        float cx   = (Screen.width  - barW) * 0.5f;
+        float baseY = Screen.height * 0.75f;
 
-        // ---- label ----
         string prompt = state == DockState.Docked
-            ? "Press [E] to undock"
-            : holdTimer > 0.01f ? "Docking..." : "Hold [E] to dock";
+            ? "Press [X / E] to undock"
+            : holdTimer > 0.01f ? "Docking..." : "Hold [X / E] to dock";
 
-        DrawShadowedLabel(new Rect(centerX, baseY, barW, labelH), prompt);
+        DrawShadowedLabel(new Rect(cx, baseY, barW, labelH), prompt);
 
-        // ---- progress bar (only while actively holding E) ----
         if (state == DockState.NearDock && holdTimer > 0.01f)
         {
-            float pct    = holdDuration > 0f ? Mathf.Clamp01(holdTimer / holdDuration) : 1f;
-            float barY   = baseY + labelH + padding;
-            var   bgRect = new Rect(centerX, barY, barW, barH);
-            var   fillRect = new Rect(centerX + 1f, barY + 1f,
-                                      (barW - 2f) * pct, barH - 2f);
+            float pct      = holdDuration > 0f ? Mathf.Clamp01(holdTimer / holdDuration) : 1f;
+            float barY     = baseY + labelH + pad;
+            var   bgRect   = new Rect(cx, barY, barW, barH);
+            var   fillRect = new Rect(cx + 1f, barY + 1f, (barW - 2f) * pct, barH - 2f);
 
-            // Background
             GUI.DrawTexture(bgRect, barBgTex);
 
-            // Filled portion — colour shifts from teal to gold as it completes
             Color fillColor = Color.Lerp(
-                new Color(0.15f, 0.80f, 0.75f),   // teal
-                new Color(1.00f, 0.80f, 0.20f),   // gold
-                pct
-            );
+                new Color(0.15f, 0.80f, 0.75f),
+                new Color(1.00f, 0.80f, 0.20f),
+                pct);
+
             var oldColor = GUI.color;
             GUI.color = fillColor;
             GUI.DrawTexture(fillRect, barFillTex);
             GUI.color = oldColor;
 
-            // Percentage label centred on the bar
-            DrawShadowedLabel(new Rect(centerX, barY - 1f, barW, barH + 2f),
+            DrawShadowedLabel(new Rect(cx, barY - 1f, barW, barH + 2f),
                               $"{Mathf.RoundToInt(pct * 100f)}%",
                               fontSize: 11, alpha: 0.85f);
         }
@@ -309,7 +391,7 @@ public class DockingStation : MonoBehaviour
         if (barFillTex == null)
         {
             barFillTex = new Texture2D(1, 1);
-            barFillTex.SetPixel(0, 0, Color.white);   // tinted at draw-time via GUI.color
+            barFillTex.SetPixel(0, 0, Color.white);
             barFillTex.Apply();
         }
     }
@@ -318,21 +400,18 @@ public class DockingStation : MonoBehaviour
     {
         var style = new GUIStyle(promptStyle);
         if (fontSize > 0) style.fontSize = fontSize;
-
         style.normal.textColor = new Color(0f, 0f, 0f, 0.65f * alpha);
         GUI.Label(new Rect(rect.x + 1f, rect.y + 1f, rect.width, rect.height), text, style);
-
         style.normal.textColor = new Color(1f, 1f, 1f, alpha);
         GUI.Label(rect, text, style);
     }
 
-    // =============================================================
-    // EDITOR GIZMOS
-    // =============================================================
+    // ==========================================================================
+    // EDITOR GIZMOS (Supplement to the in-game ring — selected-only detail view)
+    // ==========================================================================
 
     void OnDrawGizmosSelected()
     {
-        // Detection sphere
         Gizmos.color = new Color(0.2f, 1f, 0.5f, 0.18f);
         Gizmos.DrawSphere(transform.position, detectionRange);
         Gizmos.color = new Color(0.2f, 1f, 0.5f, 0.8f);
@@ -340,12 +419,9 @@ public class DockingStation : MonoBehaviour
 
         if (!dockPoint) return;
 
-        // Dock point marker
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(dockPoint.position, 1.5f);
-        // Forward arrow
         Gizmos.DrawLine(dockPoint.position, dockPoint.position + dockPoint.forward * 4f);
-        // Wing lines to hint at ship width
         Gizmos.DrawLine(dockPoint.position + dockPoint.right * 2f,
                         dockPoint.position - dockPoint.right * 2f);
     }

@@ -78,11 +78,17 @@ public class ShipController : MonoBehaviour
     [Tooltip("Seconds before another dash is allowed")]
     public float dashCooldown = 3f;
 
+    // ── Brake ─────────────────────────────────────────────────────────────────
+    [Header("Brake (X / E)")]
+    [Tooltip("Deceleration rate when braking — how fast the ship bleeds to a full stop")]
+    public float brakeDeceleration = 12f;
+
     // ── Control Input (set each frame by PlayerShipInput or AI) ───────────────
     [Header("Control Input")]
     [Range(-1f, 1f)] public float steeringInput;   // roll / bank → yaw
     [Range(-1f, 1f)] public float pitchInput;       // +1 = nose up, -1 = nose down
     [Range( 0f, 1f)] public float thrusterInput;    // 0 = idle coast, 1 = full thrust (RT)
+    [Range( 0f, 1f)] public float brakeInput;       // 1 = full brake → decelerates to 0
 
     // ── Legacy fields — kept so AI scripts continue to compile ────────────────
     [HideInInspector] public GearState currentGear = GearState.Gear1;
@@ -263,17 +269,31 @@ public class ShipController : MonoBehaviour
     {
         if (destroyed) return;
 
-        // ── Thruster speed ────────────────────────────────────────────────────
-        // Dead engines: bleed to zero.  Otherwise: RT maps 0→min, 1→max speed.
-        float targetSpeed = (sailsDestroyed || hullDisabled)
-            ? 0f
-            : Mathf.Lerp(minThrusterSpeed, maxThrusterSpeed, thrusterInput);
+        // ── Thruster / Brake speed ────────────────────────────────────────────
+        // Priority: brake > dead engines > thruster
+        // Brake brings the ship to a full stop; releasing it lets the ship
+        // resume coasting at whatever thrusterInput demands.
+        float targetSpeed;
+        float accel;
+
+        if (brakeInput > 0f)
+        {
+            targetSpeed = 0f;
+            accel       = brakeDeceleration;
+        }
+        else if (sailsDestroyed || hullDisabled)
+        {
+            targetSpeed = 0f;
+            accel       = thrusterDeceleration;
+        }
+        else
+        {
+            targetSpeed = Mathf.Lerp(minThrusterSpeed, maxThrusterSpeed, thrusterInput);
+            accel       = targetSpeed > currentForwardSpeed ? thrusterAcceleration : thrusterDeceleration;
+        }
 
         if (!isDashing)
-        {
-            float accel = targetSpeed > currentForwardSpeed ? thrusterAcceleration : thrusterDeceleration;
             currentForwardSpeed = Mathf.MoveTowards(currentForwardSpeed, targetSpeed, accel * Time.deltaTime);
-        }
 
         // Move forward — transform.forward now includes pitch, so the ship
         // genuinely climbs/dives in world space.
@@ -308,14 +328,16 @@ public class ShipController : MonoBehaviour
         transform.Rotate(0f, currentRotationSpeed * Time.deltaTime, 0f, Space.World);
 
         // ── Speed bleed from hard manoeuvres ──────────────────────────────────
-        // Only bleed above minimum; MoveTowards will recover next frame if thrust is on.
-        if (currentForwardSpeed > minThrusterSpeed)
+        // Allow 0 floor when braking; otherwise keep at least minThrusterSpeed.
+        float speedFloor = (brakeInput > 0f || sailsDestroyed || hullDisabled) ? 0f : minThrusterSpeed;
+
+        if (currentForwardSpeed > speedFloor)
         {
             float bleed = (Mathf.Abs(bankRatio)   * bankSpeedBleed
                          + Mathf.Abs(pitchInput)  * pitchSpeedBleed)
                          * Time.deltaTime;
 
-            currentForwardSpeed = Mathf.Max(currentForwardSpeed - bleed, minThrusterSpeed);
+            currentForwardSpeed = Mathf.Max(currentForwardSpeed - bleed, speedFloor);
         }
 
         ApplyRotation();

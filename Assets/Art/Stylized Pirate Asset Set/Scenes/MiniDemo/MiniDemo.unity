@@ -4091,7 +4091,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ShipCamera
   ship: {fileID: 3564860184444572577}
-  normalOffset: {x: 0, y: 14.7, z: -32.6}
+  normalOffset: {x: 0, y: 6.85, z: -2.5}
   leftAimOffset: {x: 22.2, y: 33.5, z: -32.1}
   rightAimOffset: {x: -22.2, y: 33.5, z: -32.1}
   frontAimOffset: {x: -2.88, y: 8.71, z: 10.6}
@@ -4123,12 +4123,13 @@ MonoBehaviour:
   freeAimMinPitch: -10
   freeAimMaxPitch: 45
   previewTravelMode: 0
-  travelOffset: {x: 0, y: 11.9, z: -10.12}
+  travelOffset: {x: 0, y: 6.92, z: -8.05}
   travelFOV: 69.3
-  travelPitch: 42.8
+  travelPitch: 29.8
   travelYaw: 0
   travelTransitionTime: 0.5
   travelYawLagTime: 1.5
+  travelBlendSpeed: 3
   shakeMagnitude: 0.4
   shakeDuration: 0.3
 --- !u!1001 &585096584
@@ -15313,6 +15314,18 @@ PrefabInstance:
     - target: {fileID: 8242190862056452458, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
       propertyPath: dashDuration
       value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8242190862056452458, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
+      propertyPath: maxBankAngle
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8242190862056452458, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
+      propertyPath: maxPitchAngle
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 8242190862056452458, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
+      propertyPath: maxThrusterSpeed
+      value: 12
       objectReference: {fileID: 0}
     - target: {fileID: 8242190862056452458, guid: f410cd64b7658cf438c41a10d50e1178, type: 3}
       propertyPath: forwardDashDistance

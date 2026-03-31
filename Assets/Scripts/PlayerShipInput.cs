@@ -6,30 +6,32 @@ public enum FreeAimSubMode { SingleShot, FullyAutomatic }
 /// <summary>
 /// Player input handler for AC7-style sky-ship flight controls.
 ///
-/// CONTROLLER (Xbox / XInput layout):
-///   Left  Stick X  → Roll / Bank  (turns the ship via bank-driven yaw)
-///   Left  Stick Y  → Pitch        (stick DOWN = nose UP — standard flight)
-///   Right Trigger  → Thruster     (analog 0-1: idle coast → full thrust)
-///   Left  Trigger  → Air Brake    (counteracts thrust for quick deceleration)
-///   Right Stick    → Camera look
-///   LB   (btn 4)   → Free Aim     (hold to strafe-fire with front cannons)
-///   RB   (btn 5)   → Forward dash
-///   L-Stick btn    → Left dash
-///   R-Stick btn    → Right dash
-///   A    (btn 0)   → Fire (while aiming with RMB)
+/// CONTROLLER (Xbox / XInput / PS layout):
+///   Left  Stick X      → Roll / Bank  (turns the ship via bank-driven yaw)
+///   Left  Stick Y      → Pitch        (stick DOWN = nose UP — standard flight)
+///   Right Trigger (RT) → Thruster     (analog 0-1)
+///   Right Stick        → Camera look
+///   LT  (aim button)   → Enter aim mode (broadside arc or front crosshair)
+///   Square / X btn (2) → Fire / Quick-fire
+///     • LT + Square         = aimed fire (arc for sides; full-auto forward for front)
+///     • Square alone        = quick fire at nearest side (no aim required)
+///     • Hold Square (front) = full-auto forward
+///   X   (btn 0, hold)   → Brake to full stop / hold to dock
+///   Circle (btn 1)     → Dash — direction from left stick (left/right/forward)
+///   LB  (btn 4, hold)  → Free Aim mode (strafing forward cannons)
 ///
 /// KEYBOARD / MOUSE:
 ///   A / D          → Roll / Bank
 ///   W / S          → Pitch  (W = nose up, S = nose down)
-///   Left Shift     → Thruster  (on = full thrust, off = idle coast)
-///   Left Ctrl      → Air Brake
-///   Mouse RMB      → Enter aim mode
-///   Mouse LMB      → Fire (while aiming)
+///   Left Shift     → Thruster
+///   E  (hold)      → Brake / dock
+///   Mouse RMB      → Enter aim mode (same as LT)
+///   Mouse LMB      → Fire / Quick-fire  (same as Square)
 ///   Tab  (hold)    → Free Aim mode
 ///   F              → Toggle Single / Full-Auto in Free Aim
 ///   Space          → Forward dash
 ///   Q              → Left dash
-///   E              → Right dash
+///   R              → Right dash
 /// </summary>
 [RequireComponent(typeof(ShipController))]
 [RequireComponent(typeof(CannonsController))]
@@ -46,9 +48,19 @@ public class PlayerShipInput : MonoBehaviour
     public float minAimAngle = -15f;
     public float maxAimAngle =  45f;
 
+    [Header("Quick Fire")]
+    [Tooltip("Range used when firing a broadside without aiming (Square / LMB with no aim held)")]
+    public float quickFireRange = 25f;
+
     [Header("Camera Control")]
     public float cameraSensitivity = 2f;
     public bool  invertY = false;
+
+    [Header("Controller Aim Sensitivity")]
+    [Tooltip("Degrees per second the right stick Y adjusts broadside arc elevation")]
+    public float rightStickElevationSensitivity = 60f;
+    // Forward-aim right-stick sensitivity is shared with normal free-look —
+    // adjust ShipCamera.controllerSensitivity to tune it.
 
     [Header("Free Aim Mode")]
     [Tooltip("Optional HUD component for the free-aim crosshair — auto-found on this GameObject if blank")]
@@ -71,11 +83,14 @@ public class PlayerShipInput : MonoBehaviour
     float   aimPitch;
     bool    wasAiming;
 
+    // ── Front-aim state (aim mode + front side = crosshair + full-auto) ───────
+    bool isFrontAiming;
+
     // ── Free aim state ────────────────────────────────────────────────────────
     bool           isFreeAiming;
     FreeAimSubMode freeAimSubMode = FreeAimSubMode.SingleShot;
 
-    // ── Full auto state ───────────────────────────────────────────────────────
+    // ── Shared full-auto state (reused across front-aim, free-aim, quick-fire) ─
     bool  autoFiring;
     float autoHoldTime;
     float autoFireTimer;
@@ -110,47 +125,42 @@ public class PlayerShipInput : MonoBehaviour
 
     // =========================================================================
     // FLIGHT INPUT
-    // Reads thruster (RT / Shift), pitch (Left Stick Y / W-S),
-    // roll/bank (Left Stick X / A-D), air brake (LT / Ctrl), and dashes.
     // =========================================================================
 
     void HandleFlightInput()
     {
-        // All movement suppressed during a dash burst
         if (ship.IsDashing) return;
 
-        // ── Thruster — Right Trigger (analog 0-1) / Left Shift (keyboard) ────
-        // "RightTrigger" axis is defined twice in InputManager:
-        //   • type 0 (button): positiveButton = left shift    → 0 or 1
-        //   • type 2 (joystick): axis 10 (Xbox RT on Windows) → 0..1
-        // Unity returns the larger absolute value of the two entries.
+        // ── Thruster — Right Trigger (RT) / Left Shift ────────────────────────
         float rt = Mathf.Clamp01(Input.GetAxis("RightTrigger"));
-
-        // ── Air Brake — Left Trigger / Left Ctrl ─────────────────────────────
-        float lt = Mathf.Clamp01(Input.GetAxis("LeftTrigger"));
-
-        // LT actively counteracts the throttle — gives precise speed control
-        ship.thrusterInput = Mathf.Clamp01(rt - lt);
+        ship.thrusterInput = rt;
 
         // ── Pitch — Left Stick Y (inverted) / W-S ────────────────────────────
-        // "Vertical" axis: W key → +1 (nose up), S → -1 (nose down)
-        //                  Left stick DOWN → +1 (inverted in InputManager)
-        // +1 = pitch up is the sign convention in ShipController.
         ship.pitchInput = Input.GetAxis("Vertical");
 
         // ── Roll / Bank → Yaw — Left Stick X / A-D ───────────────────────────
         ship.steeringInput = Input.GetAxis("Horizontal");
 
-        // ── Dashes ────────────────────────────────────────────────────────────
-        // Keyboard
+        // ── Brake — X button (JoystickButton0) / E key ───────────────────────
+        // Brings the ship to a full stop while held; releases back to normal speed.
+        bool brakeHeld = Input.GetKey(KeyCode.JoystickButton0) || Input.GetKey(KeyCode.E);
+        ship.brakeInput = brakeHeld ? 1f : 0f;
+
+        // ── Dash — Circle (JoystickButton1) / keyboard ───────────────────────
+        // Controller: Circle + left stick direction = contextual dash.
+        if (Input.GetKeyDown(KeyCode.JoystickButton1))
+        {
+            // Read stick that was already set this frame
+            float side = ship.steeringInput;
+            if      (side < -0.5f) ship.TryDash(DashDirection.Left);
+            else if (side >  0.5f) ship.TryDash(DashDirection.Right);
+            else                   ship.TryDash(DashDirection.Forward);
+        }
+
+        // Keyboard dashes (E is now brake, so right-dash moved to R)
         if (Input.GetKeyDown(KeyCode.Space)) ship.TryDash(DashDirection.Forward);
         if (Input.GetKeyDown(KeyCode.Q))     ship.TryDash(DashDirection.Left);
-        if (Input.GetKeyDown(KeyCode.E))     ship.TryDash(DashDirection.Right);
-
-        // Controller — RB = forward, L-Stick click = left, R-Stick click = right
-        if (Input.GetKeyDown(KeyCode.JoystickButton5)) ship.TryDash(DashDirection.Forward);
-        if (Input.GetKeyDown(KeyCode.JoystickButton8)) ship.TryDash(DashDirection.Left);
-        if (Input.GetKeyDown(KeyCode.JoystickButton9)) ship.TryDash(DashDirection.Right);
+        if (Input.GetKeyDown(KeyCode.R))     ship.TryDash(DashDirection.Right);
     }
 
     // =========================================================================
@@ -159,77 +169,212 @@ public class PlayerShipInput : MonoBehaviour
 
     void HandleAimingAndFiring()
     {
-        // Locked during a dash burst
         if (ship.IsDashing)
         {
-            if (wasAiming)
-            {
-                if (shipCamera) shipCamera.ExitAimMode();
-                cannons.HidePreview();
-                wasAiming = false;
-            }
-            if (isFreeAiming) ExitFreeAimMode();
+            ExitAllCombatModes();
             return;
         }
 
-        // ── Free Aim Mode — Tab (keyboard) / LB joystick button 4 ─────────────
-        bool freeAimHeld = Input.GetKey(KeyCode.Tab)
-                        || Input.GetKey(KeyCode.JoystickButton4);
+        // Consolidated fire input from mouse + controller Square/X button
+        bool fireDown = Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.JoystickButton2);
+        bool fireHeld = Input.GetMouseButton(0)     || Input.GetKey(KeyCode.JoystickButton2);
+
+        // ── Free Aim Mode — Tab / LB (hold) ──────────────────────────────────
+        bool freeAimHeld = Input.GetKey(KeyCode.Tab) || Input.GetKey(KeyCode.JoystickButton4);
 
         if (freeAimHeld)
         {
-            // Suppress normal aim mode while free aiming
-            if (wasAiming)
-            {
-                if (shipCamera) shipCamera.ExitAimMode();
-                cannons.HidePreview();
-                wasAiming = false;
-            }
-            HandleFreeAimMode();
+            if (wasAiming) ExitAimMode();
+            HandleFreeAimMode(fireDown, fireHeld);
             return;
         }
+        if (isFreeAiming) ExitFreeAimMode();
 
-        // Tab / LB released — exit free aim
-        if (isFreeAiming)
-            ExitFreeAimMode();
+        // ── Aimed Mode — RMB / LT ─────────────────────────────────────────────
+        // LT axis > 0.5 acts as the aim button on controller.
+        bool aimHeld = Input.GetMouseButton(1)
+                    || Input.GetAxis("LeftTrigger") > 0.5f;
 
-        // ── Normal Broadside Aim — RMB ─────────────────────────────────────────
-        bool aimButton  = Input.GetMouseButton(1);
-        bool fireButton = Input.GetMouseButtonDown(0);
-
-        if (aimButton && !wasAiming)
+        if (aimHeld && !wasAiming)
         {
             if (shipCamera) shipCamera.EnterAimMode();
             wasAiming = true;
         }
-        else if (!aimButton && wasAiming)
+        else if (!aimHeld && wasAiming)
         {
-            if (shipCamera) shipCamera.ExitAimMode();
-            cannons.HidePreview();
-            wasAiming = false;
+            ExitAimMode();
         }
 
-        if (aimButton)
+        if (wasAiming)
         {
-            UpdateAimPoint();
-            ShowTrajectoryPreview();
+            // isFrontAiming check FIRST: once the camera has been swapped to
+            // free-aim mode, CurrentAimSide returns None, so we must not use
+            // it to drive front-aim decisions after the first frame.
+            if (isFrontAiming)
+            {
+                HandleFrontAimMode(fireDown, fireHeld);
+            }
+            else
+            {
+                ShipCamera.AimSide side = shipCamera ? shipCamera.CurrentAimSide : ShipCamera.AimSide.None;
+
+                if (side == ShipCamera.AimSide.Front)
+                {
+                    // First time we see Front — let HandleFrontAimMode initialise
+                    HandleFrontAimMode(fireDown, fireHeld);
+                }
+                else
+                {
+                    if (side != ShipCamera.AimSide.None)
+                    {
+                        UpdateAimPoint();
+                        ShowTrajectoryPreview();
+                        if (fireDown) FireCurrentSide();
+                    }
+                }
+            }
+            return;
         }
 
-        if (fireButton && aimButton)
-            FireCurrentSide();
+        // ── Quick Fire — fire button pressed with NO aim held ─────────────────
+        if (isFrontAiming) ExitFrontAimMode();
+        HandleQuickFire(fireDown, fireHeld);
     }
 
-    // ── Free Aim Mode ─────────────────────────────────────────────────────────
+    // ── Front Aim Mode ────────────────────────────────────────────────────────
+    // LT held, camera facing forward.
+    // Camera switches to free-aim so the RIGHT STICK moves the crosshair.
+    // Free-aim cannons track the camera direction, giving full 3-D forward aiming.
 
-    void HandleFreeAimMode()
+    void HandleFrontAimMode(bool fireDown, bool fireHeld)
+    {
+        if (!isFrontAiming)
+        {
+            isFrontAiming = true;
+            ResetAutoFire();
+
+            // Leave broadside-snap aim; enter free-aim so the right stick
+            // drives the camera (and therefore the forward cannon direction).
+            if (shipCamera)
+            {
+                shipCamera.ExitAimMode();
+                shipCamera.EnterFreeAimMode();
+            }
+
+            cannons.EnterFreeAim();
+            cannons.HidePreview();
+            if (freeAimHUD) freeAimHUD.Show(FreeAimSubMode.FullyAutomatic);
+        }
+
+        cannons.HidePreview(); // no arc while in front-aim
+
+        if (fireHeld)
+        {
+            if (!autoFiring)
+            {
+                autoFiring = true;
+                ResetAutoFire();
+                cannons.FireFreeAimCannons();
+            }
+            else
+            {
+                autoHoldTime += Time.deltaTime;
+                float accel    = Mathf.Clamp01(autoHoldTime / autoAccelTime);
+                float interval = Mathf.Lerp(autoFireIntervalMax, autoFireIntervalMin, accel);
+                if (freeAimHUD) freeAimHUD.SetAutoProgress(accel, true);
+                autoFireTimer += Time.deltaTime;
+                if (autoFireTimer >= interval) { autoFireTimer = 0f; cannons.FireFreeAimCannons(); }
+            }
+        }
+        else
+        {
+            if (autoFiring && freeAimHUD) freeAimHUD.SetAutoProgress(0f, false);
+            autoFiring = false;
+            ResetAutoFire();
+        }
+    }
+
+    void ExitFrontAimMode()
+    {
+        if (!isFrontAiming) return;
+        isFrontAiming = false;
+        autoFiring    = false;
+        ResetAutoFire();
+        // Camera was switched to free-aim on enter — restore it now.
+        if (shipCamera) shipCamera.ExitFreeAimMode();
+        cannons.ExitFreeAim();
+        if (freeAimHUD) freeAimHUD.Hide();
+    }
+
+    // ── Quick Fire ────────────────────────────────────────────────────────────
+    // Square / LMB with no aim button held. Front = full-auto forward.
+    // Side / Back = single-volley broadside at a default range.
+
+    void HandleQuickFire(bool fireDown, bool fireHeld)
+    {
+        // Determine nearest side from camera yaw (works without entering aim mode)
+        float camYaw = shipCamera ? shipCamera.CameraYaw : 0f;
+        while (camYaw >  180f) camYaw -= 360f;
+        while (camYaw < -180f) camYaw += 360f;
+
+        ShipCamera.AimSide nearestSide;
+        if      (camYaw >= -45f && camYaw <=  45f) nearestSide = ShipCamera.AimSide.Front;
+        else if (camYaw >   45f && camYaw <= 135f) nearestSide = ShipCamera.AimSide.Right;
+        else if (camYaw <  -45f && camYaw >= -135f) nearestSide = ShipCamera.AimSide.Left;
+        else                                        nearestSide = ShipCamera.AimSide.Back;
+
+        if (nearestSide == ShipCamera.AimSide.Front)
+        {
+            // Full-auto forward — same accelerating pattern used in front-aim mode
+            if (fireHeld)
+            {
+                if (!autoFiring)
+                {
+                    autoFiring = true;
+                    ResetAutoFire();
+                    cannons.FireFreeAimCannons();
+                }
+                else
+                {
+                    autoHoldTime += Time.deltaTime;
+                    float accel    = Mathf.Clamp01(autoHoldTime / autoAccelTime);
+                    float interval = Mathf.Lerp(autoFireIntervalMax, autoFireIntervalMin, accel);
+                    autoFireTimer += Time.deltaTime;
+                    if (autoFireTimer >= interval) { autoFireTimer = 0f; cannons.FireFreeAimCannons(); }
+                }
+            }
+            else
+            {
+                autoFiring = false;
+                ResetAutoFire();
+            }
+        }
+        else
+        {
+            // Broadside quick-fire: single volley at a preset distance, no aiming
+            autoFiring = false;
+            ResetAutoFire();
+
+            if (fireDown)
+            {
+                Vector3 origin   = GetCannonOriginPos(nearestSide);
+                Vector3 sideDir  = GetSideDirection(nearestSide);
+                Vector3 flatSide = new Vector3(sideDir.x, 0f, sideDir.z).normalized;
+                Vector3 point    = origin + flatSide * quickFireRange;
+                point.y = 0f;
+                FireSideAtPoint(nearestSide, point);
+            }
+        }
+    }
+
+    // ── Tab / LB Free Aim Mode ────────────────────────────────────────────────
+
+    void HandleFreeAimMode(bool fireDown, bool fireHeld)
     {
         if (!isFreeAiming)
         {
-            isFreeAiming  = true;
-            autoFiring    = false;
-            autoHoldTime  = 0f;
-            autoFireTimer = 0f;
-
+            isFreeAiming = true;
+            ResetAutoFire();
             cannons.EnterFreeAim();
             if (shipCamera) shipCamera.EnterFreeAimMode();
             if (freeAimHUD) freeAimHUD.Show(freeAimSubMode);
@@ -241,80 +386,81 @@ public class PlayerShipInput : MonoBehaviour
             freeAimSubMode = freeAimSubMode == FreeAimSubMode.SingleShot
                 ? FreeAimSubMode.FullyAutomatic
                 : FreeAimSubMode.SingleShot;
-
             if (freeAimHUD) freeAimHUD.UpdateSubMode(freeAimSubMode);
-
-            autoFiring    = false;
-            autoHoldTime  = 0f;
-            autoFireTimer = 0f;
+            ResetAutoFire();
         }
 
         cannons.HidePreview();
 
-        // Fire input: LMB (mouse) or joystick button 0 (A / Cross)
-        bool lmbHeld = Input.GetMouseButton(0) || Input.GetKey(KeyCode.JoystickButton0);
-        bool lmbDown = Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.JoystickButton0);
-
         if (freeAimSubMode == FreeAimSubMode.SingleShot)
         {
-            autoFiring   = false;
-            autoHoldTime = 0f;
+            autoFiring = false;
             if (freeAimHUD) freeAimHUD.SetAutoProgress(0f, false);
-
-            if (lmbDown)
-                cannons.FireFreeAimCannons();
+            if (fireDown) cannons.FireFreeAimCannons();
         }
-        else // FullyAutomatic
+        else
         {
-            if (lmbHeld)
+            if (fireHeld)
             {
                 if (!autoFiring)
                 {
-                    autoFiring    = true;
-                    autoHoldTime  = 0f;
-                    autoFireTimer = 0f;
+                    autoFiring = true;
+                    ResetAutoFire();
                     cannons.FireFreeAimCannons();
                 }
                 else
                 {
                     autoHoldTime += Time.deltaTime;
-                    float accel           = Mathf.Clamp01(autoHoldTime / autoAccelTime);
-                    float currentInterval = Mathf.Lerp(autoFireIntervalMax, autoFireIntervalMin, accel);
-
+                    float accel    = Mathf.Clamp01(autoHoldTime / autoAccelTime);
+                    float interval = Mathf.Lerp(autoFireIntervalMax, autoFireIntervalMin, accel);
                     if (freeAimHUD) freeAimHUD.SetAutoProgress(accel, true);
-
                     autoFireTimer += Time.deltaTime;
-                    if (autoFireTimer >= currentInterval)
-                    {
-                        autoFireTimer = 0f;
-                        cannons.FireFreeAimCannons();
-                    }
+                    if (autoFireTimer >= interval) { autoFireTimer = 0f; cannons.FireFreeAimCannons(); }
                 }
             }
             else
             {
                 if (autoFiring && freeAimHUD) freeAimHUD.SetAutoProgress(0f, false);
-                autoFiring    = false;
-                autoHoldTime  = 0f;
-                autoFireTimer = 0f;
+                autoFiring = false;
+                ResetAutoFire();
             }
         }
     }
 
     void ExitFreeAimMode()
     {
-        isFreeAiming  = false;
-        autoFiring    = false;
-        autoHoldTime  = 0f;
-        autoFireTimer = 0f;
-
+        isFreeAiming = false;
+        autoFiring   = false;
+        ResetAutoFire();
         cannons.ExitFreeAim();
         if (shipCamera) shipCamera.ExitFreeAimMode();
         cannons.HidePreview();
         if (freeAimHUD) freeAimHUD.Hide();
     }
 
-    // ── Aim Point Calculation ─────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    void ExitAimMode()
+    {
+        if (shipCamera) shipCamera.ExitAimMode();
+        cannons.HidePreview();
+        ExitFrontAimMode();
+        wasAiming = false;
+    }
+
+    void ExitAllCombatModes()
+    {
+        if (wasAiming)     ExitAimMode();
+        if (isFreeAiming)  ExitFreeAimMode();
+    }
+
+    void ResetAutoFire()
+    {
+        autoHoldTime  = 0f;
+        autoFireTimer = 0f;
+    }
+
+    // ── Aim Point Calculation (broadside arc) ─────────────────────────────────
 
     void UpdateAimPoint()
     {
@@ -323,13 +469,18 @@ public class PlayerShipInput : MonoBehaviour
         ShipCamera.AimSide currentSide = shipCamera.CurrentAimSide;
         if (currentSide == ShipCamera.AimSide.None) return;
 
-        float yInput = Input.GetAxis("Mouse Y");
+        // Mouse Y (delta-based) + right stick Y (axis, scaled by dt) both adjust elevation.
+        // Right stick Y: positive = stick up = raise arc.  Use invertY to flip if needed.
+        float mouseContrib = Input.GetAxis("Mouse Y") * cameraSensitivity * 0.5f;
+        float stickContrib = Input.GetAxis("RightStickY") * rightStickElevationSensitivity * Time.deltaTime;
+
+        float yInput = mouseContrib + stickContrib;
         if (!invertY) yInput = -yInput;
 
-        aimPitch += yInput * cameraSensitivity * 0.5f;
+        aimPitch += yInput;
         aimPitch  = Mathf.Clamp(aimPitch, minAimAngle, maxAimAngle);
 
-        Transform cannonOrigin = GetCannonOrigin(currentSide);
+        Transform cannonOrigin = GetCannonOriginTransform(currentSide);
         if (!cannonOrigin)
         {
             Debug.LogWarning($"Cannon origin not set for {currentSide}!");
@@ -374,21 +525,21 @@ public class PlayerShipInput : MonoBehaviour
     void FireCurrentSide()
     {
         if (!shipCamera) return;
+        FireSideAtPoint(shipCamera.CurrentAimSide, currentAimPoint);
+    }
 
-        ShipCamera.AimSide currentSide = shipCamera.CurrentAimSide;
-
-        switch (currentSide)
+    void FireSideAtPoint(ShipCamera.AimSide side, Vector3 point)
+    {
+        switch (side)
         {
-            case ShipCamera.AimSide.Left:  cannons.FireLeftBroadsideAtPoint(currentAimPoint);  break;
-            case ShipCamera.AimSide.Right: cannons.FireRightBroadsideAtPoint(currentAimPoint); break;
-            case ShipCamera.AimSide.Front: cannons.FireFrontAtPoint(currentAimPoint);          break;
-            case ShipCamera.AimSide.Back:  cannons.FireBackAtPoint(currentAimPoint);           break;
+            case ShipCamera.AimSide.Left:  cannons.FireLeftBroadsideAtPoint(point);  break;
+            case ShipCamera.AimSide.Right: cannons.FireRightBroadsideAtPoint(point); break;
+            case ShipCamera.AimSide.Front: cannons.FireFrontAtPoint(point);          break;
+            case ShipCamera.AimSide.Back:  cannons.FireBackAtPoint(point);           break;
         }
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    Transform GetCannonOrigin(ShipCamera.AimSide side)
+    Transform GetCannonOriginTransform(ShipCamera.AimSide side)
     {
         switch (side)
         {
@@ -398,6 +549,12 @@ public class PlayerShipInput : MonoBehaviour
             case ShipCamera.AimSide.Back:  return cannons.backCannonOrigin;
             default:                       return null;
         }
+    }
+
+    Vector3 GetCannonOriginPos(ShipCamera.AimSide side)
+    {
+        Transform t = GetCannonOriginTransform(side);
+        return t ? t.position : transform.position;
     }
 
     Vector3 GetSideDirection(ShipCamera.AimSide side)
@@ -419,9 +576,9 @@ public class PlayerShipInput : MonoBehaviour
         if (!shipCamera || !shipCamera.IsAiming) return;
 
         ShipCamera.AimSide currentSide = shipCamera.CurrentAimSide;
-        if (currentSide == ShipCamera.AimSide.None) return;
+        if (currentSide == ShipCamera.AimSide.None || currentSide == ShipCamera.AimSide.Front) return;
 
-        Transform cannonOrigin = GetCannonOrigin(currentSide);
+        Transform cannonOrigin = GetCannonOriginTransform(currentSide);
         if (!cannonOrigin) return;
 
         Gizmos.color = Color.yellow;
