@@ -131,33 +131,32 @@ public class PlayerShipInput : MonoBehaviour
     {
         if (ship.IsDashing) return;
 
-        // ── Thruster — Right Trigger (RT) / Left Shift ────────────────────────
-        float rt = Mathf.Clamp01(Input.GetAxis("RightTrigger"));
-        ship.thrusterInput = rt;
+        // ── Throttle — W / Left Shift / Right Trigger (RT) ───────────────────
+        float vertical = Input.GetAxis("Vertical");             // W = +1, S = -1
+        float rt       = Mathf.Clamp01(Input.GetAxis("RightTrigger"));
+        ship.thrusterInput = Mathf.Max(Mathf.Max(vertical, 0f), rt);
 
-        // ── Pitch — Left Stick Y (inverted) / W-S ────────────────────────────
-        ship.pitchInput = Input.GetAxis("Vertical");
-
-        // ── Roll / Bank → Yaw — Left Stick X / A-D ───────────────────────────
+        // ── Steer — A-D / Left Stick X ────────────────────────────────────────
         ship.steeringInput = Input.GetAxis("Horizontal");
 
-        // ── Brake — X button (JoystickButton0) / E key ───────────────────────
-        // Brings the ship to a full stop while held; releases back to normal speed.
-        bool brakeHeld = Input.GetKey(KeyCode.JoystickButton0) || Input.GetKey(KeyCode.E);
-        ship.brakeInput = brakeHeld ? 1f : 0f;
+        // ── Brake / Reverse — S key / E key / X button / Left Trigger ────────
+        // S decelerates and eventually reverses; E / X / LT is a hard stop.
+        float lt         = Mathf.Clamp01(Input.GetAxis("LeftTrigger"));
+        bool  hardBrake  = Input.GetKey(KeyCode.JoystickButton0) || Input.GetKey(KeyCode.E);
+        float reverseKey = Mathf.Max(0f, -vertical); // S key contribution
+        ship.brakeInput  = Mathf.Max(reverseKey, Mathf.Max(lt, hardBrake ? 1f : 0f));
 
-        // ── Dash — Circle (JoystickButton1) / keyboard ───────────────────────
-        // Controller: Circle + left stick direction = contextual dash.
+        // ── Dash — maps to Sunless Skies' sidestep dodge ─────────────────────
+        // Controller: Circle (JoystickButton1) + stick direction
         if (Input.GetKeyDown(KeyCode.JoystickButton1))
         {
-            // Read stick that was already set this frame
             float side = ship.steeringInput;
             if      (side < -0.5f) ship.TryDash(DashDirection.Left);
             else if (side >  0.5f) ship.TryDash(DashDirection.Right);
             else                   ship.TryDash(DashDirection.Forward);
         }
 
-        // Keyboard dashes (E is now brake, so right-dash moved to R)
+        // Keyboard: Q = dodge left, E = dodge right, Space = forward burst
         if (Input.GetKeyDown(KeyCode.Space)) ship.TryDash(DashDirection.Forward);
         if (Input.GetKeyDown(KeyCode.Q))     ship.TryDash(DashDirection.Left);
         if (Input.GetKeyDown(KeyCode.R))     ship.TryDash(DashDirection.Right);
