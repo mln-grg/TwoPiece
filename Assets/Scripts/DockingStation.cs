@@ -278,8 +278,8 @@ public class DockingStation : MonoBehaviour
 
         playerTransform.SetPositionAndRotation(dockPoint.position, dockedRotation);
 
-        if (shipCamera && dockedCameraPoint)
-            shipCamera.EnterDockedView(dockedCameraPoint);
+        /*if (shipCamera && dockedCameraPoint)
+            shipCamera.EnterDockedView(dockedCameraPoint);*/
     }
 
     // ==========================================================================
@@ -293,7 +293,7 @@ public class DockingStation : MonoBehaviour
         holdActive     = false;
         holdTimer      = 0f;
 
-        if (shipCamera) shipCamera.ExitDockedView();
+        /*if (shipCamera) shipCamera.ExitDockedView();*/
 
         if (playerInput)    playerInput.enabled    = true;
         if (shipController) shipController.enabled  = true;

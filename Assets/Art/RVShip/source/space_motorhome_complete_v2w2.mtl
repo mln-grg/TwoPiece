@@ -1,0 +1,94 @@
+# Blender 4.3.2 MTL File: 'space_motorhome_complete_v2w2.blend'
+# www.blender.org
+
+newmtl motorhome_accessories_windows_mat
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+map_Kd C:/Blender_Cycles_Motorhome_v3_motorhome_accessories_windows_mat_diffuse.png
+map_Ns C:/Blender_Cycles_Motorhome_v3_motorhome_accessories_windows_mat_roughness.png
+map_refl C:/Blender_Cycles_Motorhome_v3_motorhome_accessories_windows_mat_metalness.png
+map_Bump -bm 1.000000 C:/Blender_Cycles_Motorhome_v3_motorhome_accessories_windows_mat_normalmap.png
+
+newmtl motorhome_body_mat
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+map_Kd C:/kiwi7_body_diffuse.png
+map_Ns C:/kiwi7_body_roughness.png
+map_refl C:/kiwi7_body_metalness.png
+map_Bump -bm 1.000000 C:/kiwi7_body_normalmap.png
+
+newmtl motorhome_headlight_lens_mat
+Ns 1000.000000
+Ka 0.724138 0.724138 0.724138
+Kd 0.951136 0.803297 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 0.627778
+illum 6
+
+newmtl motorhome_headlights_mat
+Ns 527.407104
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+map_Kd C:/vehicle_lights_atlas.png
+
+newmtl motorhome_underneath_mat
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+map_Kd C:/Blender_Cycles_Motorhome_v3_motorhome_underneath_mat_diffuse.png
+map_Ns C:/Blender_Cycles_Motorhome_v3_motorhome_underneath_mat_roughness.png
+map_refl C:/Blender_Cycles_Motorhome_v3_motorhome_underneath_mat_metalness.png
+map_Bump -bm 1.000000 C:/Blender_Cycles_Motorhome_v3_motorhome_underneath_mat_normalmap.png
+
+newmtl motorhome_wheel_tire_suspension_mat
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+map_Kd C:/Blender_Cycles_Motorhome_v3_motorhome_wheel_tire_suspension_mat_diffuse.png
+map_Ns C:/Blender_Cycles_Motorhome_v3_motorhome_wheel_tire_suspension_mat_roughness.png
+map_refl C:/Blender_Cycles_Motorhome_v3_motorhome_wheel_tire_suspension_mat_metalness.png
+map_Bump -bm 1.000000 C:/Blender_Cycles_Motorhome_v3_motorhome_wheel_tire_suspension_mat_normalmap.png
+
+newmtl space_pack_1_2
+Ka 1.000000 1.000000 1.000000
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd C:/space_pack_fromPaint_space_pack_1_2_diffuse.png
+map_Ns C:/space_pack_fromPaint_space_pack_1_2_roughness.png
+map_refl C:/space_pack_fromPaint_space_pack_1_2_metalness.png
+map_Bump -bm 1.000000 C:/space_pack_fromPaint_space_pack_1_2_normalmap.png
+
+newmtl space_pack_2_2
+Ka 1.000000 1.000000 1.000000
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 2
+map_Kd C:/space_pack_fromPaint_space_pack_2_2_diffuse.png
+map_Ns C:/space_pack_fromPaint_space_pack_2_2_roughness.png
+map_refl C:/space_pack_fromPaint_space_pack_2_2_metalness.png
+map_Bump -bm 1.000000 C:/space_pack_fromPaint_space_pack_2_2_normalmap.png
