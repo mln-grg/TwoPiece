@@ -1,0 +1,91 @@
+# Blender 4.3.2 MTL File: 'Motorhome_v4_forRelease_r2.blend'
+# www.blender.org
+
+newmtl motorhome_accessories_windows_mat
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd Textures/motorhome_accessories_windows_mat_diffuse.png
+map_Pm Textures/motorhome_accessories_windows_mat_metalness.png
+map_Pr Textures/motorhome_accessories_windows_mat_roughness.png
+map_Bump -bm 1.000000 Textures/motorhome_accessories_windows_mat_normalmap.png
+
+newmtl motorhome_body_mat
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd Textures/motorhome_body_mat_diffuse.png
+map_Pm Textures/motorhome_body_mat_metalness.png
+map_Pr Textures/motorhome_body_mat_roughness.png
+map_Bump -bm 1.000000 Textures/motorhome_body_mat_normalmap.png
+
+newmtl motorhome_headlight_lens_mat
+Kd 0.951136 0.803297 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 0.627778
+illum 6
+Pr 0.000000
+Pm 0.724138
+
+newmtl motorhome_headlights_mat
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+Pr 0.273772
+Pm 1.000000
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd Textures/vehicle_lights_atlas.png
+
+newmtl motorhome_underneath_mat
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd Textures/motorhome_underneath_mat_diffuse.png
+map_Pm Textures/motorhome_underneath_mat_metalness.png
+map_Pr Textures/motorhome_underneath_mat_roughness.png
+map_Bump -bm 1.000000 Textures/motorhome_underneath_mat_normalmap.png
+
+newmtl motorhome_wheel_tire_suspension_mat
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.500000
+d 1.000000
+illum 3
+Ps 0.000000
+Pc 0.000000
+Pcr 0.030000
+aniso 0.000000
+anisor 0.000000
+map_Kd Textures/motorhome_wheel_tire_suspension_mat_diffuse.png
+map_Pm Textures/motorhome_wheel_tire_suspension_mat_metalness.png
+map_Pr Textures/motorhome_wheel_tire_suspension_mat_roughness.png
+map_Bump -bm 1.000000 Textures/motorhome_wheel_tire_suspension_mat_normalmap.png
