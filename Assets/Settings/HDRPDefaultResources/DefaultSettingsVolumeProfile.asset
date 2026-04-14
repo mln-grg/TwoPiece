@@ -862,6 +862,7 @@ MonoBehaviour:
   - {fileID: 5082175224665408323}
   - {fileID: -2580288312874386488}
   - {fileID: -4831687602477468203}
+  - {fileID: 917982871263175047}
 --- !u!114 &448115243408767295
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -989,6 +990,55 @@ MonoBehaviour:
   m_ObsoleteScrollSpeed:
     m_OverrideState: 1
     m_Value: 1
+--- !u!114 &917982871263175047
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f1e873838aa2ea24db54001dfbf8a1f5, type: 3}
+  m_Name: SaturdayMorningCRTComponent
+  m_EditorClassIdentifier: Assembly-CSharp::SaturdayMorningCRTComponent
+  active: 1
+  intensity:
+    m_OverrideState: 1
+    m_Value: 1
+  scanlineIntensity:
+    m_OverrideState: 1
+    m_Value: 0.2
+  scanlineCount:
+    m_OverrideState: 1
+    m_Value: 480
+  scanlineScrollSpeed:
+    m_OverrideState: 1
+    m_Value: 0.35
+  chromaticAberration:
+    m_OverrideState: 1
+    m_Value: 0.01
+  barrelDistortion:
+    m_OverrideState: 1
+    m_Value: 0.07
+  borderSoftness:
+    m_OverrideState: 1
+    m_Value: 0.04
+  noiseIntensity:
+    m_OverrideState: 1
+    m_Value: 0.035
+  noiseSpeed:
+    m_OverrideState: 1
+    m_Value: 18
+  noisePixelSize:
+    m_OverrideState: 1
+    m_Value: 2
+  phosphorIntensity:
+    m_OverrideState: 1
+    m_Value: 0.04
+  warmTone:
+    m_OverrideState: 1
+    m_Value: 0.22
 --- !u!114 &1050253780765223818
 MonoBehaviour:
   m_ObjectHideFlags: 3
